@@ -1,0 +1,59 @@
+class A:
+	i32 a;
+
+	A():
+		this.a = 1;
+
+	A(i32 a):
+		this.a = a;
+
+	void Add():
+		this.a = this.a + 1;
+
+	void Add(i32 b):
+		this.a = this.a + b;
+
+class B:
+	string b;
+
+	B():
+		this.b = "Allo";
+
+	void Print():
+		print("Hello World {");
+		print(this.b);
+		print("}\n");
+
+class C(A):
+	string id;
+
+	C(string id):
+		base();
+		this.id = id;
+
+	C(i32 a,string id):
+		base(a);
+		this.id = id;
+
+fn i32 main():
+	C a = new C("ID");
+	print(a.id);
+	print(":\n");
+	print(a.a);
+	print("\n");
+	a.Add();
+	print(a.a);
+	print("\n");
+	
+	C c = new C(5,"ID2");
+	print(c.id);
+	print(":\n");
+	print(c.a);
+	print("\n");
+	c.Add(5);
+	print(c.a);
+	print("\n");
+
+	B b = new B();
+	b.Print();
+	return 0;
