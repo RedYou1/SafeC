@@ -25,13 +25,13 @@ class B:
 		print("}\n");
 
 class C(A):
-	string id;
+	str id;
 
-	C(string id):
+	C(str id):
 		base();
 		this.id = id;
 
-	C(i32 a,string id):
+	C(i32 a,str id):
 		base(a);
 		this.id = id;
 

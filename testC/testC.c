@@ -1,7 +1,31 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-typedef struct {
+typedef struct Array$char {
+	char* ptr;
+	unsigned long len;
+}Array$char;
+void Array$char_Construct(unsigned long len) {
+	Array$char* this = (Array$char*)malloc(sizeof(Array$char));
+	this->ptr = (char*)malloc(sizeof(char) * len);
+	this->len = len;
+	return this;
+}
+void Array$char_DeConstruct(Array$char* this) {
+	free(this->ptr);
+	free(this);
+}
+const char* string_toStr(Array$char* this) {
+	return this->ptr;
+}
+Array$char* str_toString(const char* this) {
+	Array$char* newthis = (Array$char*)malloc(sizeof(Array$char));
+	newthis->len = strlen(this);
+	newthis->ptr = (char*)malloc(newthis->len + 1);
+	memcpy(newthis->ptr, this, newthis->len + 1);
+	return newthis;
+}
+typedef struct A {
 	int a;
 }A;
 A* A_Construct() {
@@ -23,27 +47,29 @@ void A_Add(A* this) {
 void A_Add2(A* this, int b) {
 	this->a = this->a + b;
 }
-typedef struct {
-	char* b;
+typedef struct B {
+	Array$char* b;
 }B;
 B* B_Construct() {
 	B* this = (B*)malloc(sizeof(B));
-	this->b = "Allo";
+	Array$char* Assign_Converter = str_toString("Allo");
+	this->b = Assign_Converter;
 	return this;
 }
 void B_DeConstruct(B* this) {
+	Array$char_DeConstruct(this->b);
 	free(this);
 }
 void B_Print(B* this) {
 	printf("Hello World {");
-	printf("%s", this->b);
+	printf("%s", string_toStr(this->b));
 	printf("}\n");
 }
-typedef struct {
+typedef struct C {
 	int a;
-	char* id;
+	const char* id;
 }C;
-C* C_Construct(char* id) {
+C* C_Construct(const char* id) {
 	C* this = (C*)malloc(sizeof(C));
 	{
 		A* temp = A_Construct();
@@ -53,7 +79,7 @@ C* C_Construct(char* id) {
 	this->id = id;
 	return this;
 }
-C* C_Construct2(int a, char* id) {
+C* C_Construct2(int a, const char* id) {
 	C* this = (C*)malloc(sizeof(C));
 	{
 		A* temp = A_Construct2(a);

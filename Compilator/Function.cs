@@ -15,30 +15,30 @@
             this.lines = lines;
         }
 
-        public bool CanExecute(Type[] types)
+        public (Function converter, bool toDelete)?[]? CanExecute(Type[] types)
         {
             if (parameters.Length != types.Length)
-                return false;
+                return null;
+            (Function converter, bool toDelete)?[] functions = new (Function converter, bool toDelete)?[types.Length];
             for (int i = 0; i < parameters.Length; i++)
             {
-                if (!parameters[i].type.Equivalent(types[i]))
-                    return false;
+                var function = parameters[i].type.Equivalent(types[i]);
+                if (!function.success)
+                    return null;
+                functions[i] = function._explicit;
             }
-            return true;
+            return functions;
         }
 
         public void Compile(string tabs, StreamWriter sw)
         {
-            sw.Write($"{tabs}{returnType.name} {name}(");
+            sw.Write($"{tabs}{returnType.id} {name}(");
             if (parameters.Any())
             {
-                sw.Write($"{parameters.First().type.name}");
-                if (parameters.First().type is Class)
-                    sw.Write("*");
-                sw.Write($" {parameters.First().name}");
+                sw.Write($"{parameters.First().type.id} {parameters.First().name}");
                 foreach (var parameter in parameters.Skip(1))
                 {
-                    sw.Write($", {parameter.type.name} {parameter.name}");
+                    sw.Write($", {parameter.type.id} {parameter.name}");
                 }
             }
             sw.WriteLine(") {");
