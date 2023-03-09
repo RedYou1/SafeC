@@ -33,8 +33,16 @@ A* A_Construct() {
 	this->a = 1;
 	return this;
 }
-A* A_Construct2(int a) {
+A* A_BaseConstruct(A* this) {
+	this->a = 1;
+	return this;
+}
+A* A_Construct1(int a) {
 	A* this = (A*)malloc(sizeof(A));
+	this->a = a;
+	return this;
+}
+A* A_BaseConstruct1(A* this, int a) {
 	this->a = a;
 	return this;
 }
@@ -56,6 +64,11 @@ B* B_Construct() {
 	this->b = Assign_Converter;
 	return this;
 }
+B* B_BaseConstruct(B* this) {
+	Array$char* Assign_Converter = str_toString("Allo");
+	this->b = Assign_Converter;
+	return this;
+}
 void B_DeConstruct(B* this) {
 	Array$char_DeConstruct(this->b);
 	free(this);
@@ -68,28 +81,36 @@ void B_Print(B* this) {
 typedef struct C {
 	int a;
 	const char* id;
+	B* b;
 }C;
 C* C_Construct(const char* id) {
 	C* this = (C*)malloc(sizeof(C));
-	{
-		A* temp = A_Construct();
-		memcpy(this, temp, sizeof(A));
-		free(temp);
-	}
+	A_BaseConstruct(this);
 	this->id = id;
+	this->b = B_Construct();
 	return this;
 }
-C* C_Construct2(int a, const char* id) {
-	C* this = (C*)malloc(sizeof(C));
-	{
-		A* temp = A_Construct2(a);
-		memcpy(this, temp, sizeof(A));
-		free(temp);
-	}
+C* C_BaseConstruct(C* this, const char* id) {
+	A_BaseConstruct(this);
 	this->id = id;
+	this->b = B_Construct();
+	return this;
+}
+C* C_Construct1(int a, const char* id) {
+	C* this = (C*)malloc(sizeof(C));
+	A_BaseConstruct1(this, a);
+	this->id = id;
+	this->b = B_Construct();
+	return this;
+}
+C* C_BaseConstruct1(C* this, int a, const char* id) {
+	A_BaseConstruct1(this, a);
+	this->id = id;
+	this->b = B_Construct();
 	return this;
 }
 void C_DeConstruct(C* this) {
+	B_DeConstruct(this->b);
 	free(this);
 }
 int main() {
@@ -101,18 +122,18 @@ int main() {
 	A_Add(a);
 	printf("%i", a->a);
 	printf("\n");
-	C* c = C_Construct2(5, "ID2");
-	printf("%s", c->id);
+	C_DeConstruct(a);
+	a = C_Construct1(5, "ID2");
+	printf("%s", a->id);
 	printf(":\n");
-	printf("%i", c->a);
+	printf("%i", a->a);
 	printf("\n");
-	A_Add2(c, 5);
-	printf("%i", c->a);
+	A_Add2(a, 5);
+	printf("%i", a->a);
 	printf("\n");
 	B* b = B_Construct();
 	B_Print(b);
 	C_DeConstruct(a);
-	C_DeConstruct(c);
 	B_DeConstruct(b);
 	return 0;
 }

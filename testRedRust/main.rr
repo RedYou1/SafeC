@@ -26,14 +26,17 @@ class B:
 
 class C(A):
 	str id;
+	B b;
 
 	C(str id):
 		base();
 		this.id = id;
+		this.b = new B();
 
 	C(i32 a,str id):
 		base(a);
 		this.id = id;
+		this.b = new B();
 
 fn i32 main():
 	C a = new C("ID");
@@ -45,13 +48,13 @@ fn i32 main():
 	print(a.a);
 	print("\n");
 	
-	C c = new C(5,"ID2");
-	print(c.id);
+	a = new C(5,"ID2");
+	print(a.id);
 	print(":\n");
-	print(c.a);
+	print(a.a);
 	print("\n");
-	c.Add(5);
-	print(c.a);
+	a.Add(5);
+	print(a.a);
 	print("\n");
 
 	B b = new B();
