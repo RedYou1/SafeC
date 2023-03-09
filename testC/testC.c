@@ -113,6 +113,9 @@ void C_DeConstruct(C* this) {
 	B_DeConstruct(this->b);
 	free(this);
 }
+B* createB() {
+	return B_Construct();
+}
 int main() {
 	C* a = C_Construct("ID");
 	printf("%s", a->id);
@@ -131,7 +134,7 @@ int main() {
 	A_Add2(a, 5);
 	printf("%i", a->a);
 	printf("\n");
-	B* b = B_Construct();
+	B* b = createB();
 	B_Print(b);
 	C_DeConstruct(a);
 	B_DeConstruct(b);

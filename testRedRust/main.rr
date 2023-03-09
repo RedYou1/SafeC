@@ -38,6 +38,9 @@ class C(A):
 		this.id = id;
 		this.b = new B();
 
+fn B createB():
+	return new B();
+
 fn i32 main():
 	C a = new C("ID");
 	print(a.id);
@@ -57,6 +60,6 @@ fn i32 main():
 	print(a.a);
 	print("\n");
 
-	B b = new B();
+	B b = createB();
 	b.Print();
 	return 0;

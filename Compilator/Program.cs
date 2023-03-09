@@ -1,5 +1,7 @@
 ﻿using RedRust;
 
+List<Function> globalFunction = new();
+
 Dictionary<string, RedRust.Type> types = new()
 {
     { "void",new("void")}
@@ -166,9 +168,9 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
     else
     {
         returnType = types[string.Join(string.Empty, declaration.TakeWhile(a => a != ' '))];
-        declaration = declaration.Substring(returnType.id.Length + 1);
-        name = string.Join(string.Empty, declaration.TakeWhile(a => a != '('));
-        declaration = declaration.Substring(name.Length + 1, declaration.Length - name.Length - 3);
+        name = string.Join(string.Empty, declaration.TakeWhile(a => a != '(')).Split(" ")[1];
+        var d = declaration.IndexOf('(');
+        declaration = declaration.Substring(d + 1, declaration.Length - declaration.IndexOf('(') - 3);
         if (className is not null)
         {
             name = $"{className.name}_{name}";
@@ -255,7 +257,7 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
                         {
                             args.Add(Convert(a, variables).type!);
                         }
-                    var func = GetFunction(_class, funcName, (variable.type, variable.name), args.ToArray());
+                    var func = GetFunction(_class, funcName, args.ToArray());
                     line = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 4);
                     string funcLine = $"{func.func.name}({variable.name}";
 
@@ -285,7 +287,6 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
                 }
                 else if (_class.variables.Any(v => v.name.Equals(funcName)))
                 {
-                    //TODO func()
                     // = 
                     var v = Convert($"{variable.name}.{funcName}", variables);
                     if (!constructor && (v.type?.CanDeconstruct ?? false))
@@ -313,7 +314,8 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
                 lines.Add(new FuncLine($"{_class.name}_DeConstruct({variable.name})"));
             }
 
-            lines.Add(new FuncLine($"return {Convert(line.Substring(7, line.Length - 8), variables).var}"));//TODO can do operation
+            AssignVariable(variables, lines, $"return ", line.Substring(7), returnType, constructor);
+
             while (enumarator.MoveNext())
             {
                 if (string.IsNullOrWhiteSpace(enumarator.Current))
@@ -421,40 +423,65 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
     return new Function(name, returnType, paramameters.ToArray(), lines.ToArray());
 }
 
-(Class _class, Function func, (Function converter, bool toDelete)?[] converts) GetFunction(Class _class, string funcName, (RedRust.Type type, string name) v, RedRust.Type[] args)
+(Function func, (Function converter, bool toDelete)?[] converts) GetFunction(Class _class, string funcName, RedRust.Type[] args)
 {
     Class? e = _class;
+    (Function converter, bool toDelete)?[]? converts = null;
+    Function? func = null;
     while (e is not null)
     {
         if (e.functions is not null)
         {
-            (Function converter, bool toDelete)?[]? converts = null;
-            Function? func = e.functions.FirstOrDefault(f => f.name.StartsWith($"{e.name}_{funcName}") && (converts = f.CanExecute(args)) is not null);
+            converts = null;
+            func = e.functions.FirstOrDefault(f => f.name.StartsWith($"{e.name}_{funcName}") && (converts = f.CanExecute(args)) is not null);
             if (func is not null && converts is not null)
-                return (e, func, converts);
+                return (func, converts);
         }
         e = e.extend;
     }
-    throw new Exception($"cant find value {funcName} in object of type {v.type.id} named {v.name}");
+    func = globalFunction.FirstOrDefault(f => f.name.StartsWith(funcName) && (converts = f.CanExecute(args)) is not null);
+    if (func is not null && converts is not null)
+        return (func, converts);
+    throw new Exception($"cant find value {funcName} in object of type {_class.name}");
 }
 
 ///<summary>return type: should be deleted</summary>
 bool AssignVariable(List<(RedRust.Type type, string name, bool toDelete)> variables, List<Token> lines, string preEqual, string afterEqual, RedRust.Type type, bool constructor)
 {
-    if (afterEqual.StartsWith("new"))
+    if (afterEqual.EndsWith(");"))
     {
         Class _class = (Class)type;
-        afterEqual = afterEqual.Substring(_class.name.Length + 5, afterEqual.Length - _class.name.Length - 7);
-
-        RedRust.Type[] args = new RedRust.Type[0];
-        if (!string.IsNullOrWhiteSpace(afterEqual))
-            args = afterEqual.Split(",")
-                .Select(a => Convert(a, variables).type!).ToArray();
-
         (Function converter, bool toDelete)?[]? converts = null;
-        Function? function = _class.constructs.FirstOrDefault(f => (converts = f.CanExecute(args)) is not null);
-        if (function is null || converts is null)
-            throw new Exception($"constructor not found in class {_class.name}");
+        Function? function = null;
+
+        if (afterEqual.StartsWith("new "))
+        {
+            afterEqual = afterEqual.Substring(_class.name.Length + 5, afterEqual.Length - _class.name.Length - 7);
+
+            RedRust.Type[] args = new RedRust.Type[0];
+            if (!string.IsNullOrWhiteSpace(afterEqual))
+                args = afterEqual.Split(",")
+                    .Select(a => Convert(a, variables).type!).ToArray();
+
+            function = _class.constructs.FirstOrDefault(f => (converts = f.CanExecute(args)) is not null);
+            if (function is null || converts is null)
+                throw new Exception($"constructor not found in class {_class.name}");
+        }
+        else
+        {
+            string funcName = afterEqual.Split('(')[0].Split(' ')[0];
+
+            var args = new List<RedRust.Type>();
+            afterEqual = afterEqual.Substring(funcName.Length + 1, afterEqual.Length - funcName.Length - 3);
+            if (!string.IsNullOrWhiteSpace(afterEqual))
+                foreach (var a in afterEqual.Split(","))
+                {
+                    args.Add(Convert(a, variables).type!);
+                }
+            var func = GetFunction(_class, funcName, args.ToArray());
+            function = func.func;
+            converts = func.converts;
+        }
 
         string funcLine = $"{preEqual}{function.name}(";
         var stringargs = afterEqual.Split(",");
@@ -518,6 +545,8 @@ IEnumerable<Token> Interpret(string pathin)
     bool canmove = enumarator.MoveNext();
     while (canmove)
     {
+        if (enumarator.Current is null)
+            break;
         if (string.IsNullOrWhiteSpace(enumarator.Current))
             continue;
         if (enumarator.Current.StartsWith("class "))
@@ -590,7 +619,10 @@ IEnumerable<Token> Interpret(string pathin)
         }
         else if (enumarator.Current.StartsWith("fn "))
         {
-            yield return ParseFunc(false, string.Empty, null, enumarator);
+            var func = ParseFunc(false, string.Empty, null, enumarator);
+            globalFunction.Add(func);
+            yield return func;
+            continue;
         }
         canmove = enumarator.MoveNext();
     }
