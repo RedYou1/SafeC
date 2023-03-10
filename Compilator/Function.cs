@@ -15,17 +15,17 @@
             this.lines = lines;
         }
 
-        public (Function converter, bool toDelete)?[]? CanExecute(Type[] types)
+        public List<Converter>[]? CanExecute(Type[] types)
         {
             if (parameters.Length != types.Length)
                 return null;
-            (Function converter, bool toDelete)?[] functions = new (Function converter, bool toDelete)?[types.Length];
+            List<Converter>[] functions = new List<Converter>[types.Length];
             for (int i = 0; i < parameters.Length; i++)
             {
                 var function = parameters[i].type.Equivalent(types[i]);
-                if (!function.success)
+                if (function is null)
                     return null;
-                functions[i] = function._explicit;
+                functions[i] = function;
             }
             return functions;
         }
@@ -47,6 +47,24 @@
                 line.Compile($"{tabs}\t", sw);
             }
             sw.WriteLine($$"""{{tabs}}}""");
+        }
+    }
+
+    internal class FuncBlock : Token
+    {
+        public readonly Token[] lines;
+
+        public FuncBlock(params Token[] lines)
+        {
+            this.lines = lines;
+        }
+
+        public void Compile(string tabs, StreamWriter sw)
+        {
+            foreach (var line in lines)
+            {
+                line.Compile($"{tabs}\t", sw);
+            }
         }
     }
 }

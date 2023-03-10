@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+typedef enum { false, true } bool;
 typedef struct Array$char {
 	char* ptr;
 	unsigned long len;
@@ -14,9 +15,6 @@ void Array$char_Construct(unsigned long len) {
 void Array$char_DeConstruct(Array$char* this) {
 	free(this->ptr);
 	free(this);
-}
-const char* string_toStr(Array$char* this) {
-	return this->ptr;
 }
 Array$char* str_toString(const char* this) {
 	Array$char* newthis = (Array$char*)malloc(sizeof(Array$char));
@@ -60,13 +58,13 @@ typedef struct B {
 }B;
 B* B_Construct() {
 	B* this = (B*)malloc(sizeof(B));
-	Array$char* Assign_Converter = str_toString("Allo");
-	this->b = Assign_Converter;
+	Array$char* Converter = str_toString("Allo");
+	this->b = Converter;
 	return this;
 }
 B* B_BaseConstruct(B* this) {
-	Array$char* Assign_Converter = str_toString("Allo");
-	this->b = Assign_Converter;
+	Array$char* Converter = str_toString("Allo");
+	this->b = Converter;
 	return this;
 }
 void B_DeConstruct(B* this) {
@@ -75,7 +73,7 @@ void B_DeConstruct(B* this) {
 }
 void B_Print(B* this) {
 	printf("Hello World {");
-	printf("%s", string_toStr(this->b));
+	printf("%s", this->b->ptr);
 	printf("}\n");
 }
 typedef struct C {
@@ -117,8 +115,14 @@ B* createB() {
 	B* b = B_Construct();
 	return b;
 }
+C* createC(int* a, const char* id) {
+	if (a != NULL) {
+		return C_Construct1(*a, id);
+	}
+	return C_Construct(id);
+}
 int main() {
-	C* a = C_Construct("ID");
+	C* a = createC(NULL, "ID");
 	printf("%s", a->id);
 	printf(":\n");
 	printf("%i", a->a);
@@ -127,7 +131,8 @@ int main() {
 	printf("%i", a->a);
 	printf("\n");
 	C_DeConstruct(a);
-	a = C_Construct1(5, "ID2");
+	int Converter = 5;
+	a = createC(&Converter, "ID2");
 	printf("%s", a->id);
 	printf(":\n");
 	printf("%i", a->a);

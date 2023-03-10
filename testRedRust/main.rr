@@ -42,8 +42,13 @@ fn B createB():
 	B b = new B();
 	return b;
 
+fn C createC(i32? a,str id):
+	if a:
+		return new C(a,id);
+	return new C(id);
+
 fn i32 main():
-	C a = new C("ID");
+	C a = createC(null,"ID");
 	print(a.id);
 	print(":\n");
 	print(a.a);
@@ -52,7 +57,7 @@ fn i32 main():
 	print(a.a);
 	print("\n");
 	
-	a = new C(5,"ID2");
+	a = createC(5,"ID2");
 	print(a.id);
 	print(":\n");
 	print(a.a);
