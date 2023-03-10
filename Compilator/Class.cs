@@ -3,14 +3,14 @@
     internal class Class : Pointer, Token
     {
         public readonly string name;
-        public readonly (Type type, string name, bool toDelete)[] variables;
+        public readonly Variable[] variables;
 
         public readonly List<Function> constructs;
         public readonly List<Function> functions;
 
         public readonly Class? extend;
 
-        public Class(string name, (Type type, string name, bool toDelete)[] variables, Class? extend)
+        public Class(string name, Variable[] variables, Class? extend)
             : base(new(name))
         {
             this.name = name;

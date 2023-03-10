@@ -114,7 +114,8 @@ void C_DeConstruct(C* this) {
 	free(this);
 }
 B* createB() {
-	return B_Construct();
+	B* b = B_Construct();
+	return b;
 }
 int main() {
 	C* a = C_Construct("ID");

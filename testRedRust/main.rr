@@ -39,7 +39,8 @@ class C(A):
 		this.b = new B();
 
 fn B createB():
-	return new B();
+	B b = new B();
+	return b;
 
 fn i32 main():
 	C a = new C("ID");

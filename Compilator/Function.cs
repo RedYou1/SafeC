@@ -4,10 +4,10 @@
     {
         public readonly Type returnType;
         public readonly string name;
-        public readonly (Type type, string name)[] parameters;
+        public readonly Variable[] parameters;
         public readonly Token[] lines;
 
-        public Function(string name, Type returnType, (Type type, string name)[] parameters, params Token[] lines)
+        public Function(string name, Type returnType, Variable[] parameters, params Token[] lines)
         {
             this.name = name;
             this.returnType = returnType;
