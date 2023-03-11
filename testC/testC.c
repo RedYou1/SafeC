@@ -35,12 +35,12 @@ A* A_BaseConstruct(A* this) {
 	this->a = 1;
 	return this;
 }
-A* A_Construct1(int a) {
+A* A_Construct2(int a) {
 	A* this = (A*)malloc(sizeof(A));
 	this->a = a;
 	return this;
 }
-A* A_BaseConstruct1(A* this, int a) {
+A* A_BaseConstruct2(A* this, int a) {
 	this->a = a;
 	return this;
 }
@@ -94,15 +94,15 @@ C* C_BaseConstruct(C* this, const char* id) {
 	this->b = B_Construct();
 	return this;
 }
-C* C_Construct1(int a, const char* id) {
+C* C_Construct2(int a, const char* id) {
 	C* this = (C*)malloc(sizeof(C));
-	A_BaseConstruct1(this, a);
+	A_BaseConstruct2(this, a);
 	this->id = id;
 	this->b = B_Construct();
 	return this;
 }
-C* C_BaseConstruct1(C* this, int a, const char* id) {
-	A_BaseConstruct1(this, a);
+C* C_BaseConstruct2(C* this, int a, const char* id) {
+	A_BaseConstruct2(this, a);
 	this->id = id;
 	this->b = B_Construct();
 	return this;
@@ -117,7 +117,7 @@ B* createB() {
 }
 C* createC(int* a, const char* id) {
 	if (a != NULL) {
-		return C_Construct1(*a, id);
+		return C_Construct2(*a, id);
 	}
 	return C_Construct(id);
 }
@@ -133,6 +133,9 @@ int main() {
 	C_DeConstruct(a);
 	int Converter = 5;
 	a = createC(&Converter, "ID2");
+	C_DeConstruct(a);
+	int Converter2 = 6;
+	a = createC(&Converter2, "ID3");
 	printf("%s", a->id);
 	printf(":\n");
 	printf("%i", a->a);

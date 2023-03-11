@@ -58,6 +58,7 @@ fn i32 main():
 	print("\n");
 	
 	a = createC(5,"ID2");
+	a = createC(6,"ID3");
 	print(a.id);
 	print(":\n");
 	print(a.a);

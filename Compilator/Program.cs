@@ -1,5 +1,8 @@
 ﻿using RedRust;
 
+List<string> typesNames = new();
+NamesManager functionNames = new();
+
 List<Function> globalFunction = new();
 
 Dictionary<string, RedRust.Type> types = new()
@@ -59,6 +62,14 @@ _str.explicitCast.Add((new Function("str_toString", _string,
 
 types.Add("string", _string);
 types.Add("str", _str);
+
+
+foreach (var type in types)
+{
+    typesNames.Add(type.Key);
+    if (type.Value is Class p)
+        typesNames.Add(p.name);
+}
 
 char[] operators = new char[] { '+', '-', '*', '-' };
 
@@ -185,6 +196,8 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
         {
             name = $"{className.name}_{name}";
         }
+
+        name = functionNames.Ask(name);
     }
 
     List<Variable> paramameters = new();
@@ -202,36 +215,12 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
             paramameters.Add(new(v[1], t, false)); // TODO could take ownership
         }
 
-    if (className is not null)
-    {
-        int i = 1;
-        while (true)
-        {
-            bool ok = true;
-            string newName = name;
-            if (i != 1)
-                newName += i;
-            foreach (Function func in constructor ? className.constructs : className.functions)
-            {
-                if (func.name.Equals(newName))
-                {
-                    i++;
-                    ok = false;
-                    continue;
-                }
-            }
-            if (ok)
-                break;
-        }
-        if (i != 1)
-            name += i;
-    }
-
+    NamesManager variablesNamesManager = new();
     List<Variable> variables = new();
     List<Token> lines = new();
     if (constructor)
     {
-        variables.Add(new("this", className!, false));
+        variables.Add(new(variablesNamesManager.Ask("this"), className!, false));
     }
 
     foreach (var var in paramameters)
@@ -239,7 +228,7 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
         variables.Add(new(var.name, var.type, var.toDelete));//Clone if variable change ownership
     }
 
-    ReadBlock(name, returnType, constructor, tabs, className, enumarator, lines, paramameters, variables);
+    ReadBlock(name, returnType, constructor, tabs, className, enumarator, lines, paramameters, variables, variablesNamesManager);
 
     if (returnType == types["void"])
         endFunction(variables, lines, null);
@@ -250,7 +239,7 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
     return new Function(name, returnType, paramameters.ToArray(), lines.ToArray());
 }
 
-void ReadBlock(string name, RedRust.Type returnType, bool constructor, string tabs, Class? className, IEnumerator<string> enumarator, List<Token> lines, List<Variable> paramameters, List<Variable> variables)
+void ReadBlock(string name, RedRust.Type returnType, bool constructor, string tabs, Class? className, IEnumerator<string> enumarator, List<Token> lines, List<Variable> paramameters, List<Variable> variables, NamesManager variablesNamesManager)
 {
     bool moveOk = enumarator.MoveNext();
     while (moveOk)
@@ -269,9 +258,9 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
         {
             var type = types.First(x => line.StartsWith(x.Key));
             line = line.Substring(type.Key.Length + 1);// mandatory space
-            string varName = line.Split(' ')[0];
+            string varName = variablesNamesManager.Ask(line.Split(' ')[0]);
             string[] e = line.Split(" = ");
-            AssignVariable(variables, lines, $"{type.Value.id} {e[0]} = ", e[1], type.Value, constructor);
+            AssignVariable(variables, variablesNamesManager, lines, $"{type.Value.id} {e[0]} = ", e[1], type.Value, constructor);
             variables.Add(new(varName, type.Value, true));
         }
         else if (variables.Any(x => line.StartsWith(x.name)))// variable...
@@ -304,7 +293,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                     for (int i = 1; i < func.converts.Length; i++)
                     {
                         string r = Convert(stringargs[i - 1], variables).var;
-                        r = ConvertVariable(lines, variables, func.converts[i], r);
+                        r = ConvertVariable(lines, variables, variablesNamesManager, func.converts[i], r);
                         funcLine += $", {r}";
                     }
 
@@ -318,7 +307,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                         lines.Add(new FuncLine($"{_class.name}_DeConstruct({v.var})"));
 
                     string[] e = line.Split(" = ");
-                    AssignVariable(variables, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, constructor);
+                    AssignVariable(variables, variablesNamesManager, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, constructor);
                 }
                 else
                     throw new Exception($"cant find value {funcName} in object of type {_class.name} named {variable.name}");
@@ -327,7 +316,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             {
                 if (variable.toDelete)
                     lines.Add(new FuncLine($"{_class.name}_DeConstruct({variable.name})"));
-                AssignVariable(variables, lines, $"{variable.name} = ", line.Substring(3), variable.type, constructor);
+                AssignVariable(variables, variablesNamesManager, lines, $"{variable.name} = ", line.Substring(3), variable.type, constructor);
             }
         }
         else if (line.StartsWith("return "))
@@ -335,7 +324,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             line = line.Substring(7);
             endFunction(variables, lines, line);
 
-            AssignVariable(variables, lines, $"return ", line, returnType, constructor);
+            AssignVariable(variables, variablesNamesManager, lines, $"return ", line, returnType, constructor);
 
             while (enumarator.MoveNext())
             {
@@ -362,7 +351,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             lines.Add(new FuncLine2($"if ({v.var} != NULL) {{"));
             _null.isNull = false;
             List<Token> l2 = new();
-            ReadBlock(name, returnType, constructor, $"{tabs}\t", className, enumarator, l2, paramameters, variables);
+            ReadBlock(name, returnType, constructor, $"{tabs}\t", className, enumarator, l2, paramameters, variables, variablesNamesManager);
             lines.Add(new FuncBlock(l2.ToArray()));
             lines.Add(new FuncLine2("}"));
             _null.isNull = true;
@@ -384,7 +373,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                 {
                     string r = v.var;
 
-                    r = ConvertVariable(lines, variables, i.Item1, r);
+                    r = ConvertVariable(lines, variables, variablesNamesManager, i.Item1, r);
 
                     lines.Add(new FuncLine($"printf(\"%{i.Item2}\", {r})"));
                     notdone = false;
@@ -423,7 +412,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             for (int i = 1; i < converts.Length; i++)
             {
                 string r = Convert(stringargs[i - 1], variables).var;
-                r = ConvertVariable(lines, variables, converts[i], r);
+                r = ConvertVariable(lines, variables, variablesNamesManager, converts[i], r);
                 funcLine += $", {r}";
             }
             lines.Add(new FuncLine($"{funcLine})"));
@@ -460,7 +449,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
     throw new Exception($"cant find value {funcName} in object of type {_class.name}");
 }
 
-void AssignVariable(List<Variable> variables, List<Token> lines, string preEqual, string afterEqual, RedRust.Type type, bool constructor)
+void AssignVariable(List<Variable> variables, NamesManager variablesNamesManager, List<Token> lines, string preEqual, string afterEqual, RedRust.Type type, bool constructor)
 {
     if (afterEqual.EndsWith(");"))
     {
@@ -506,7 +495,7 @@ void AssignVariable(List<Variable> variables, List<Token> lines, string preEqual
         for (int i = 0; i < converts.Length; i++)
         {
             string r = Convert(stringargs[i], variables).var;
-            r = ConvertVariable(lines, variables, converts[i], r);
+            r = ConvertVariable(lines, variables, variablesNamesManager, converts[i], r);
             funcLine += $"{r}, ";
         }
 
@@ -522,7 +511,7 @@ void AssignVariable(List<Variable> variables, List<Token> lines, string preEqual
             throw new Exception("cant convert type");
 
         string r = t.var;
-        r = ConvertVariable(lines, variables, converts, r);
+        r = ConvertVariable(lines, variables, variablesNamesManager, converts, r);
         lines.Add(new FuncLine($"{preEqual}{r}"));
     }
 }
@@ -549,6 +538,11 @@ IEnumerable<Token> Interpret(string pathin)
                 extend = (Class)types.First(c => c.Key.Equals(name.Substring(temp.Length + 1, name.Length - temp.Length - 2))).Value;
                 name = temp;
             }
+
+            if (typesNames.Contains(name))
+                throw new Exception($"type {name} already exists");
+            typesNames.Add(name);
+
             List<Variable> variables = new();
             while (canmove = enumarator.MoveNext())
             {
@@ -573,9 +567,6 @@ IEnumerable<Token> Interpret(string pathin)
                 if (!enumarator.Current.StartsWith($"\t{name}("))
                     break;
                 Function func = ParseFunc(true, "\t", c, enumarator);
-                string append = (c.constructs.Count / 2).ToString();
-                if (append == "0")
-                    append = string.Empty;
 
                 List<Token> t = new()
                 {
@@ -583,7 +574,7 @@ IEnumerable<Token> Interpret(string pathin)
                 };
                 t.AddRange(func.lines);
 
-                c.constructs.Add(new Function($"{name}_Construct{append}", func.returnType, func.parameters, t.ToArray()));
+                c.constructs.Add(new Function(functionNames.Ask($"{name}_Construct"), func.returnType, func.parameters, t.ToArray()));
 
                 List<Variable> p = new()
                 {
@@ -591,7 +582,7 @@ IEnumerable<Token> Interpret(string pathin)
                 };
                 p.AddRange(func.parameters);
 
-                c.constructs.Add(new Function($"{name}_BaseConstruct{append}", func.returnType, p.ToArray(), func.lines));
+                c.constructs.Add(new Function(functionNames.Ask($"{name}_BaseConstruct"), func.returnType, p.ToArray(), func.lines));
             } while (true);
             if (!c.constructs.Any())
                 throw new Exception($"no constructor specified for class {name}");
@@ -651,7 +642,7 @@ static void endFunction(List<Variable> variables, List<Token> lines, string? lin
     }
 }
 
-string ConvertVariable(List<Token> lines, List<Variable> variables, List<Converter> convert, string r)
+string ConvertVariable(List<Token> lines, List<Variable> variables, NamesManager variablesNamesManager, List<Converter> convert, string r)
 {
     foreach (Converter f in convert.ToArray().Reverse())
     {
@@ -659,7 +650,7 @@ string ConvertVariable(List<Token> lines, List<Variable> variables, List<Convert
             continue;
         if (f.state == ConverterEnum.ToNull)
         {
-            string varname = $"Converter";
+            string varname = variablesNamesManager.Ask("Converter");
             var type = Convert(r, variables).type!;
             variables.Add(new(varname, type, false));
             lines.Add(new FuncLine($"{f._null!.id} {varname} = {r}"));
@@ -669,7 +660,7 @@ string ConvertVariable(List<Token> lines, List<Variable> variables, List<Convert
             r = f._implicit!(r);
         else if (f._explicit!.Value.toDelete)
         {
-            string varname = $"Converter";
+            string varname = variablesNamesManager.Ask("Converter");
             variables.Add(new(varname, f._explicit.Value.converter.returnType, true));
             lines.Add(new FuncLine(
                 $"{f._explicit.Value.converter.returnType.id} {varname} = {f._explicit.Value.converter.name}({r})"));
