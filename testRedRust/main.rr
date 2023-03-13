@@ -7,10 +7,10 @@ class A:
 	A(i32 a):
 		this.a = a;
 
-	void Add():
+	void Add(&dyn this):
 		this.a = this.a + 1;
 
-	void Add(i32 b):
+	void Add(&dyn this,i32 b):
 		this.a = this.a + b;
 
 class B:
@@ -19,9 +19,12 @@ class B:
 	B():
 		this.b = "Allo";
 
-	void Print():
+	void Print(&dyn this?):
 		print("Hello World {");
-		print(this.b);
+		if this:
+			print(this.b);
+		else:
+			print("null");
 		print("}\n");
 
 class C(A):
@@ -58,7 +61,7 @@ fn i32 main():
 	print("\n");
 	
 	a = createC(5,"ID2");
-	a = createC(6,"ID3");
+	a = createC(6,"ID2,1");
 	print(a.id);
 	print(":\n");
 	print(a.a);
@@ -67,6 +70,8 @@ fn i32 main():
 	print(a.a);
 	print("\n");
 
-	B b = createB();
+	B? b = null;
+	b.Print();
+	b = createB();
 	b.Print();
 	return 0;

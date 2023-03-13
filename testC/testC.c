@@ -73,7 +73,12 @@ void B_DeConstruct(B* this) {
 }
 void B_Print(B* this) {
 	printf("Hello World {");
-	printf("%s", this->b->ptr);
+	if (this != NULL) {
+		printf("%s", this->b->ptr);
+	}
+	else {
+		printf("null");
+	}
 	printf("}\n");
 }
 typedef struct C {
@@ -135,7 +140,7 @@ int main() {
 	a = createC(&Converter, "ID2");
 	C_DeConstruct(a);
 	int Converter2 = 6;
-	a = createC(&Converter2, "ID3");
+	a = createC(&Converter2, "ID2,1");
 	printf("%s", a->id);
 	printf(":\n");
 	printf("%i", a->a);
@@ -143,9 +148,16 @@ int main() {
 	A_Add2(a, 5);
 	printf("%i", a->a);
 	printf("\n");
-	B* b = createB();
+	B* b = NULL;
+	B_Print(b);
+	if (b != NULL) {
+		B_DeConstruct(b);
+	}
+	b = createB();
 	B_Print(b);
 	C_DeConstruct(a);
-	B_DeConstruct(b);
+	if (b != NULL) {
+		B_DeConstruct(b);
+	}
 	return 0;
 }

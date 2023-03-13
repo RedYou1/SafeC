@@ -1,21 +1,13 @@
 ﻿namespace RedRust
 {
-    internal class Nullable : Pointer
+    internal class Nullable : Modifier
     {
-        public readonly Type realOf;
         public bool isNull;
 
-        public Nullable(Type of, bool isNull)
-            : base(of, of is not Pointer)
+        public Nullable(Type of, bool isNull) : base(of)
         {
-            realOf = of;
             this.isNull = isNull;
-            if (of is not Pointer)
-                implicitCast.Add((of, deReference));
         }
-
-        static string deReference(string arg)
-        => $"*{arg}";
     }
 
     internal class Null : Type

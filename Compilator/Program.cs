@@ -135,10 +135,11 @@ char[] operators = new char[] { '+', '-', '*', '-' };
         return (type, r);
     for (int i = 1; i < vars.Length; i++)
     {
-        if (type is not Class)
+        Class? _class = type.AsClass();
+
+        if (_class is null)
             throw new Exception($"type {type.id} is not a class");
 
-        Class? _class = (Class)type;
         while (_class is not null)
         {
             if (vars[i].EndsWith(")"))
@@ -184,11 +185,10 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
     else
     {
         string typeName = string.Join(string.Empty, declaration.TakeWhile(a => a != ' '));
-
-        if (typeName.EndsWith("?"))
-            returnType = new RedRust.Nullable(types[typeName.Substring(0, typeName.Length - 1)], true);
-        else
-            returnType = types[typeName];
+        var returnType2 = GetType(typeName);
+        if (returnType2 is null)
+            throw new Exception($"return type not found {typeName}");
+        returnType = returnType2;
         name = string.Join(string.Empty, declaration.TakeWhile(a => a != '(')).Split(" ")[1];
         var d = declaration.IndexOf('(');
         declaration = declaration.Substring(d + 1, declaration.Length - declaration.IndexOf('(') - 3);
@@ -201,19 +201,27 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
     }
 
     List<Variable> paramameters = new();
+    string[] stringparams = declaration.Split(",");
+    if (string.IsNullOrWhiteSpace(declaration))
+        stringparams = new string[0];
     if (!constructor && className is not null)
-        paramameters.Add(new("this", className, false));
-    if (!string.IsNullOrWhiteSpace(declaration))
-        foreach (var var in declaration.Split(","))
-        {
-            var v = var.Split(" ");
-            RedRust.Type t;
-            if (v[0].EndsWith("?"))
-                t = new RedRust.Nullable(types[v[0].Substring(0, v[0].Length - 1)], true);
-            else
-                t = types[v[0]];
-            paramameters.Add(new(v[1], t, false)); // TODO could take ownership
-        }
+    {
+        if (stringparams.Length == 0)
+            throw new Exception("no params in class function");
+
+        if (!stringparams[0].Contains("this"))
+            throw new Exception("the first parameter of class function should be a 'this' parameter");
+
+        paramameters.Add(new("this", GetType(stringparams[0].Replace("this", className.name)), false));
+        stringparams = stringparams.Skip(1).ToArray();
+    }
+    foreach (var var in stringparams)
+    {
+        var v = var.Split(" ");
+        var typestring = string.Join(" ", v.SkipLast(1));
+        RedRust.Type t = GetType(typestring);
+        paramameters.Add(new(v.Last(), t, false)); // TODO could take ownership
+    }
 
     NamesManager variablesNamesManager = new();
     List<Variable> variables = new();
@@ -239,6 +247,30 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
     return new Function(name, returnType, paramameters.ToArray(), lines.ToArray());
 }
 
+string[] splitArgs(string args)
+{
+    List<string> r = new();
+    string s = string.Empty;
+    bool ok = true;
+    foreach (char c in args)
+    {
+        if (c == '"')
+        {
+            ok = !ok;
+        }
+        else if (ok && c == ',')
+        {
+            r.Add(s.Trim());
+            s = string.Empty;
+            continue;
+        }
+        s += c;
+    }
+    if (!string.IsNullOrWhiteSpace(s))
+        r.Add(s.Trim());
+    return r.ToArray();
+}
+
 void ReadBlock(string name, RedRust.Type returnType, bool constructor, string tabs, Class? className, IEnumerator<string> enumarator, List<Token> lines, List<Variable> paramameters, List<Variable> variables, NamesManager variablesNamesManager)
 {
     bool moveOk = enumarator.MoveNext();
@@ -254,45 +286,56 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
         if (!enumarator.Current.StartsWith($"{tabs}\t"))
             break;
         string line = enumarator.Current.Substring(tabs.Length + 1);
-        if (types.Any(x => line.StartsWith(x.Key)))// type name = ...;
+
+        if (line.Contains(" = "))// type name = ...;
         {
-            var type = types.First(x => line.StartsWith(x.Key));
-            line = line.Substring(type.Key.Length + 1);// mandatory space
-            string varName = variablesNamesManager.Ask(line.Split(' ')[0]);
-            string[] e = line.Split(" = ");
-            AssignVariable(variables, variablesNamesManager, lines, $"{type.Value.id} {e[0]} = ", e[1], type.Value, constructor);
-            variables.Add(new(varName, type.Value, true));
+            var equal = line.Split(" = ");
+            var firstSplit = equal[0].Split(" ");
+            string typeName = string.Join(" ", firstSplit.SkipLast(1));
+            RedRust.Type? type = GetType(typeName);
+
+            if (type is not null)
+            {
+
+                string varName = firstSplit.Last();
+
+                AssignVariable(variables, variablesNamesManager, lines, $"{type.id} {varName} = ", equal[1], type, constructor);
+                variables.Add(new(varName, type, true));
+                moveOk = enumarator.MoveNext();
+                continue;
+            }
         }
-        else if (variables.Any(x => line.StartsWith(x.name)))// variable...
+
+        if (variables.Any(x => line.StartsWith(x.name)))// variable...
         {
             var variable = variables.First(x => line.StartsWith(x.name));
             line = line.Substring(variable.name.Length);
-            if (variable.type is not Class _class)
+
+            Class? _class = variable.type.AsClass();
+
+            if (_class is null)
                 throw new Exception($"can't call function on the non class variable {variable.name}");
+
             if (line.StartsWith("."))// call function
             {
                 string funcName = line.Substring(1).Split('(')[0].Split(' ')[0];
                 if (line.ElementAt(funcName.Length + 1) == '(')
                 {
                     var args = new List<RedRust.Type>() { variable.type };
-                    string argsLine = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 4);
-                    if (!string.IsNullOrWhiteSpace(argsLine))
-                        foreach (var a in argsLine.Split(","))
-                        {
-                            args.Add(Convert(a, variables).type!);
-                        }
+                    var argsLine = splitArgs(line.Substring(funcName.Length + 2, line.Length - funcName.Length - 4));
+                    foreach (var a in argsLine)
+                    {
+                        args.Add(Convert(a, variables).type!);
+                    }
                     var func = GetFunction(_class, funcName, args.ToArray());
                     line = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 4);
                     string funcLine = $"{func.func.name}({variable.name}";
 
-                    var stringargs = line.Split(",");
-                    if (string.IsNullOrWhiteSpace(stringargs[0]))
-                        stringargs = new string[0];
-                    if (stringargs.Length + 1 != func.converts.Length)
+                    if (argsLine.Length + 1 != func.converts.Length)
                         throw new Exception("not right amount of args");
                     for (int i = 1; i < func.converts.Length; i++)
                     {
-                        string r = Convert(stringargs[i - 1], variables).var;
+                        string r = Convert(argsLine[i - 1], variables).var;
                         r = ConvertVariable(lines, variables, variablesNamesManager, func.converts[i], r);
                         funcLine += $", {r}";
                     }
@@ -303,8 +346,8 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                 {
                     // = 
                     var v = Convert($"{variable.name}.{funcName}", variables);
-                    if (!constructor && (v.type?.CanDeconstruct ?? false))
-                        lines.Add(new FuncLine($"{_class.name}_DeConstruct({v.var})"));
+                    if (!constructor && v.type is not null && v.type.CanDeconstruct)
+                        deleteVar(_class.variables.First(v => v.name.Equals(funcName)), lines, line);
 
                     string[] e = line.Split(" = ");
                     AssignVariable(variables, variablesNamesManager, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, constructor);
@@ -315,7 +358,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             else//reassign
             {
                 if (variable.toDelete)
-                    lines.Add(new FuncLine($"{_class.name}_DeConstruct({variable.name})"));
+                    deleteVar(variable, lines, line);
                 AssignVariable(variables, variablesNamesManager, lines, $"{variable.name} = ", line.Substring(3), variable.type, constructor);
             }
         }
@@ -355,6 +398,13 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             lines.Add(new FuncBlock(l2.ToArray()));
             lines.Add(new FuncLine2("}"));
             _null.isNull = true;
+            if (!enumarator.Current.Substring(tabs.Length + 1).StartsWith("else"))
+                continue;
+            lines.Add(new FuncLine2($"else {{"));
+            l2 = new();
+            ReadBlock(name, returnType, constructor, $"{tabs}\t", className, enumarator, l2, paramameters, variables, variablesNamesManager);
+            lines.Add(new FuncBlock(l2.ToArray()));
+            lines.Add(new FuncLine2("}"));
             continue;
         }
         else if (line.StartsWith("print(\""))
@@ -392,10 +442,11 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
 
             Class _class = ((Class)v.type).extend!;
 
+            var stringargs = splitArgs(line);
+
             List<RedRust.Type> args = new() { _class };
             if (!string.IsNullOrWhiteSpace(line))
-                args.AddRange(line.Split(",")
-                    .Select(a => Convert(a, variables).type!));
+                args.AddRange(stringargs.Select(a => Convert(a, variables).type!));
 
 
             List<Converter>[]? converts = null;
@@ -404,9 +455,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                 throw new Exception($"base constructor not found in class {_class.name} for {v.type.id}");
 
             string funcLine = $"{function.name}(this";
-            var stringargs = line.Split(",");
-            if (string.IsNullOrWhiteSpace(stringargs[0]))
-                stringargs = new string[0];
+
             if (stringargs.Length + 1 != converts.Length)
                 throw new Exception("not right amount of args");
             for (int i = 1; i < converts.Length; i++)
@@ -453,18 +502,18 @@ void AssignVariable(List<Variable> variables, NamesManager variablesNamesManager
 {
     if (afterEqual.EndsWith(");"))
     {
-        Class _class = (Class)type;
+        Class _class = type.AsClass();
         List<Converter>[]? converts = null;
         Function? function = null;
+        string[] stringargs;
 
         if (afterEqual.StartsWith("new "))
         {
             afterEqual = afterEqual.Substring(_class.name.Length + 5, afterEqual.Length - _class.name.Length - 7);
 
-            RedRust.Type[] args = new RedRust.Type[0];
-            if (!string.IsNullOrWhiteSpace(afterEqual))
-                args = afterEqual.Split(",")
-                    .Select(a => Convert(a, variables).type!).ToArray();
+            stringargs = splitArgs(afterEqual);
+
+            RedRust.Type[] args = stringargs.Select(a => Convert(a, variables).type!).ToArray();
 
             function = _class.constructs.FirstOrDefault(f => (converts = f.CanExecute(args)) is not null);
             if (function is null || converts is null)
@@ -476,20 +525,17 @@ void AssignVariable(List<Variable> variables, NamesManager variablesNamesManager
 
             var args = new List<RedRust.Type>();
             afterEqual = afterEqual.Substring(funcName.Length + 1, afterEqual.Length - funcName.Length - 3);
-            if (!string.IsNullOrWhiteSpace(afterEqual))
-                foreach (var a in afterEqual.Split(","))
-                {
-                    args.Add(Convert(a, variables).type!);
-                }
+            stringargs = splitArgs(afterEqual);
+            foreach (var a in stringargs)
+            {
+                args.Add(Convert(a, variables).type!);
+            }
             var func = GetFunction(_class, funcName, args.ToArray());
             function = func.func;
             converts = func.converts;
         }
 
         string funcLine = $"{preEqual}{function.name}(";
-        var stringargs = afterEqual.Split(",");
-        if (string.IsNullOrWhiteSpace(stringargs[0]))
-            stringargs = new string[0];
         if (stringargs.Length != converts.Length)
             throw new Exception("not right amount of args");
         for (int i = 0; i < converts.Length; i++)
@@ -551,6 +597,16 @@ IEnumerable<Token> Interpret(string pathin)
                 if (!enumarator.Current.EndsWith(";"))
                     break;
                 var l = enumarator.Current.Substring(1, enumarator.Current.Length - 2).Split(' ');
+                if (variables.Any(v => v.name.Equals(l[1])))
+                    throw new Exception($"variable already containing the name {l[1]} in class {name}");
+                Class? e = extend;
+                while (e is not null)
+                {
+                    if (e.variables.Any(v => v.name.Equals(l[1])))
+                        throw new Exception($"variable already containing the name {l[1]} in class {name}");
+                    e = e.extend;
+                }
+
                 variables.Add(new(l[1], types[l[0]], types[l[0]].CanDeconstruct));
             }
 
@@ -578,7 +634,7 @@ IEnumerable<Token> Interpret(string pathin)
 
                 List<Variable> p = new()
                 {
-                   new("this",c,false)
+                   new("this",new Dynamic(c),false)
                 };
                 p.AddRange(func.parameters);
 
@@ -621,24 +677,41 @@ foreach (var t in Interpret(@"..\..\..\testRedRust\main.rr"))
     t.Compile(string.Empty, f);
 }
 
+static void deleteVar(Variable variable, List<Token> lines, string? line)
+{
+    string pre = string.Empty;
+    var _class = variable.type.AsClass();
+
+    if (variable.toDelete && _class is not null && (line is null || !variable.name.Equals(line.Substring(0, line.Length - 1))))
+    {
+        var t = variable.type;
+        while (t is Modifier mod)
+        {
+            if (mod is RedRust.Nullable n)
+            {
+                if (n.isNull)
+                {
+                    lines.Add(new FuncLine2($"if ({variable.name} != NULL) {{"));
+                    pre = "\t";
+                }
+                break;
+            }
+            t = mod.of;
+        }
+
+        lines.Add(new FuncLine($"{pre}{_class.name}_DeConstruct({variable.name})"));
+
+        if (t is RedRust.Nullable n2)
+            if (n2.isNull)
+                lines.Add(new FuncLine2($"}}"));
+    }
+}
+
 static void endFunction(List<Variable> variables, List<Token> lines, string? line)
 {
     foreach (var variable in variables)
     {
-        string pre = string.Empty;
-        var t = variable.type;
-
-        if (variable.toDelete && variable.type is Class _class && (line is null || !variable.name.Equals(line.Substring(0, line.Length - 1))))
-        {
-            if (t is RedRust.Nullable n)
-            {
-                lines.Add(new FuncLine($"if ({variable.name} != nullptr)"));
-                pre = "\t";
-                t = n.realOf;
-            }
-
-            lines.Add(new FuncLine($"{pre}{_class.name}_DeConstruct({variable.name})"));
-        }
+        deleteVar(variable, lines, line);
     }
 }
 
@@ -671,4 +744,33 @@ string ConvertVariable(List<Token> lines, List<Variable> variables, NamesManager
     }
 
     return r;
+}
+
+RedRust.Type? GetType(string typeName)
+{
+    List<Func<RedRust.Type, RedRust.Type>> t = new();
+
+
+    if (typeName.StartsWith("&"))
+    {
+        typeName = typeName.Substring(1);
+        t.Add((RedRust.Type type) => new Reference(type));
+    }
+    if (typeName.StartsWith("dyn "))
+    {
+        typeName = typeName.Substring(4);
+        t.Add((RedRust.Type type) => new Dynamic(type));
+    }
+    if (typeName.EndsWith("?"))
+    {
+        typeName = typeName.Substring(0, typeName.Length - 1);
+        t.Add((RedRust.Type type) => new RedRust.Nullable(type, true));
+    }
+
+    if (!types.ContainsKey(typeName))
+        return null;
+    RedRust.Type type = types[typeName];
+    foreach (var t2 in t)
+        type = t2(type);
+    return type;
 }

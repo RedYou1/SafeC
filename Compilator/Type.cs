@@ -23,48 +23,50 @@
 
         public bool TypeEquals(Type e)
         => Equals(e) ||
-                (this is Nullable n2 && (e is Null || (e is Nullable n3 && n2.realOf.Equals(n3.realOf))));
+                (this is Nullable n2 && (e is Null || (e is Nullable n3 && n2.of.Equals(n3.of))));
 
-        public List<Converter>? Equivalent(Type other)
+        public virtual List<Converter>? Equivalent(Type other)
         {
-            Type? e = other;
-            List<Converter>? function = null;
-            while (e is not null)
+            if (TypeEquals(other))
+                return new() { Converter.Success };
+
+            if (this is Nullable n && n.of.Equals(other))
+                return new() { other is Pointer ? Converter.Success : Converter.NewNull(n.of) };
+
+            foreach (var t in other.implicitCast)
             {
-                if (TypeEquals(e))
-                    return new() { Converter.Success };
-
-                if (this is Nullable n && n.realOf.Equals(e))
-                    return new() { e is Pointer ? Converter.Success : Converter.NewNull(n.realOf) };
-
-                foreach (var t in e.implicitCast)
+                var eq = Equivalent(t.type);
+                if (eq is not null)
                 {
-                    var eq = Equivalent(t.type);
-                    if (eq is not null)
-                    {
-                        eq.Add(Converter.NewImplicit(t.convert));
-                        return eq;
-                    }
+                    eq.Add(Converter.NewImplicit(t.convert));
+                    return eq;
                 }
-                if (function is null)
-                    foreach (var t in e.explicitCast)
-                    {
-                        if (Equals(t.converter.returnType))
-                        {
-                            function = new() { Converter.NewExplicit(t) };
-                        }
-                    }
-
-                if (e is Class _class)
-                    e = _class.extend;
-                else
-                    break;
             }
-            return function;
+            foreach (var t in other.explicitCast)
+            {
+                if (Equals(t.converter.returnType))
+                {
+                    return new() { Converter.NewExplicit(t) };
+                }
+            }
+            return null;
+        }
+
+        public static string deReference(string arg)
+        => $"*{arg}";
+
+        public Class? AsClass()
+        {
+            Type t = this;
+            while (t is Modifier mod)
+                t = mod.of;
+            if (t is Class _class)
+                return _class;
+            return null;
         }
 
         public bool Equals(Type? other)
-        => other is not null && GetType() == other.GetType() && id.Equals(other.id);
+        => other is not null && id.Equals(other.id);
     }
 
     internal enum ConverterEnum
@@ -109,5 +111,52 @@
 
         public bool Equals(Pointer? other)
         => other is not null && id.Equals(other.id) && of.Equals(other.of);
+    }
+
+    internal class Modifier : Pointer
+    {
+        public Modifier(Type of) : base(of, of is not Pointer)
+        {
+            if (of is not Pointer)
+                implicitCast.Add((of, deReference));
+        }
+    }
+
+    internal class Dynamic : Modifier
+    {
+
+        public Dynamic(Type of) : base(of) { }
+
+        private static bool checkConverter(Converter b)
+            => b.state == ConverterEnum.Explicit || b.state == ConverterEnum.ToNull;
+
+        public override List<Converter>? Equivalent(Type other)
+        {
+            Type? e = other;
+            List<Converter>? function = null;
+            while (e is not null)
+            {
+                var r = base.Equivalent(e);
+
+                if (r is not null)
+                {
+                    var count1 = r.Where(checkConverter).Count();
+                    var count2 = function?.Where(checkConverter).Count() ?? int.MaxValue;
+                    if (count1 < count2 || (count1 == count2 && r.Count < (function?.Count ?? int.MaxValue)))
+                        function = r;
+                }
+
+                if (e is Class _class)
+                    e = _class.extend;
+                else
+                    break;
+            }
+            return function;
+        }
+    }
+
+    internal class Reference : Modifier
+    {
+        public Reference(Type of) : base(of) { }
     }
 }
