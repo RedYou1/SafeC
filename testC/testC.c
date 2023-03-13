@@ -1,12 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-typedef enum { false, true } bool;
+typedef enum bool { false, true } bool;
 typedef struct Array$char {
 	char* ptr;
 	unsigned long len;
 }Array$char;
-void Array$char_Construct(unsigned long len) {
+Array$char* Array$char_Construct(unsigned long len) {
 	Array$char* this = (Array$char*)malloc(sizeof(Array$char));
 	this->ptr = (char*)malloc(sizeof(char) * len);
 	this->len = len;
@@ -52,6 +52,29 @@ void A_Add(A* this) {
 }
 void A_Add2(A* this, int b) {
 	this->a = this->a + b;
+}
+typedef enum Extend$A {
+	Extend$A$A,
+	Extend$A$C,
+}Extend$A;
+typedef struct Typed$A {
+	A* ptr;
+	Extend$A type;
+}Typed$A;
+Typed$A* Typed$A_Construct(A* ptr, Extend$A type) {
+	Typed$A* this = (Typed$A*)malloc(sizeof(Typed$A));
+	this->ptr = ptr;
+	this->type = type;
+	return this;
+}
+void Typed$A_DeConstruct(Typed$A* this) {
+	free(this);
+}
+Typed$A* A_to_Typed$A(A* this) {
+	Typed$A* t = (Typed$A*)malloc(sizeof(Typed$A));
+	t->ptr = this;
+	t->type = Extend$A$A;
+	return t;
 }
 typedef struct B {
 	Array$char* b;
@@ -116,6 +139,15 @@ void C_DeConstruct(C* this) {
 	B_DeConstruct(this->b);
 	free(this);
 }
+void C_Add(C* this) {
+	this->a = this->a + 2;
+}
+Typed$A* C_to_Typed$A(C* this) {
+	Typed$A* t = (Typed$A*)malloc(sizeof(Typed$A));
+	t->ptr = this;
+	t->type = Extend$A$C;
+	return t;
+}
 B* createB() {
 	B* b = B_Construct();
 	return b;
@@ -126,21 +158,37 @@ C* createC(int* a, const char* id) {
 	}
 	return C_Construct(id);
 }
+void Add(Typed$A* a) {
+	if (a->type == Extend$A$A) {
+		A_Add(a->ptr);
+	}
+	else if (a->type == Extend$A$C) {
+		C_Add(a->ptr);
+	}
+}
 int main() {
+	A* aa = A_Construct();
+	printf("%i", aa->a);
+	printf("\n");
+	Typed$A* Converter = A_to_Typed$A(aa);
+	Add(Converter);
+	printf("%i", aa->a);
+	printf("\n");
 	C* a = createC(NULL, "ID");
 	printf("%s", a->id);
 	printf(":\n");
 	printf("%i", a->a);
 	printf("\n");
-	A_Add(a);
+	Typed$A* Converter2 = C_to_Typed$A(a);
+	Add(Converter2);
 	printf("%i", a->a);
 	printf("\n");
 	C_DeConstruct(a);
-	int Converter = 5;
-	a = createC(&Converter, "ID2");
+	int Converter3 = 5;
+	a = createC(&Converter3, "ID2");
 	C_DeConstruct(a);
-	int Converter2 = 6;
-	a = createC(&Converter2, "ID2,1");
+	int Converter4 = 6;
+	a = createC(&Converter4, "ID2,1");
 	printf("%s", a->id);
 	printf(":\n");
 	printf("%i", a->a);
@@ -155,7 +203,10 @@ int main() {
 	}
 	b = createB();
 	B_Print(b);
+	A_DeConstruct(aa);
+	Typed$A_DeConstruct(Converter);
 	C_DeConstruct(a);
+	Typed$A_DeConstruct(Converter2);
 	if (b != NULL) {
 		B_DeConstruct(b);
 	}

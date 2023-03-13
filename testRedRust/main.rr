@@ -41,6 +41,9 @@ class C(A):
 		this.id = id;
 		this.b = new B();
 
+	void Add(&dyn this):
+		this.a = this.a + 2;
+
 fn B createB():
 	B b = new B();
 	return b;
@@ -50,13 +53,23 @@ fn C createC(i32? a,str id):
 		return new C(a,id);
 	return new C(id);
 
+fn void Add(&typedyn A a):
+	a.Add();
+
 fn i32 main():
+	A aa = new A();
+	print(aa.a);
+	print("\n");
+	Add(aa);
+	print(aa.a);
+	print("\n");
+
 	C a = createC(null,"ID");
 	print(a.id);
 	print(":\n");
 	print(a.a);
 	print("\n");
-	a.Add();
+	Add(a);
 	print(a.a);
 	print("\n");
 	

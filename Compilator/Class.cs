@@ -4,11 +4,14 @@
     {
         public readonly string name;
         public readonly Variable[] variables;
+        public readonly Variable[] allVariables;
 
         public readonly List<Function> constructs;
         public readonly List<Function> functions;
 
         public readonly Class? extend;
+        public List<Class> inherit = new();
+        public Typed? typed = null;
 
         public Class(string name, Variable[] variables, Class? extend)
             : base(new(name))
@@ -16,31 +19,46 @@
             this.name = name;
             CanDeconstruct = true;
             this.variables = variables;
+
+            List<Variable> allVariables = new();
+
+            if (extend is not null)
+                allVariables.AddRange(extend.allVariables);
+
+            allVariables.AddRange(variables);
+
+            this.allVariables = allVariables.ToArray();
+
             this.extend = extend;
             constructs = new List<Function>();
             functions = new List<Function>();
         }
 
-        public void Compile(string tabs, StreamWriter sw)
+        public virtual List<ToCallFunc> GetFunctions(string funcName, Type[] args)
+        {
+            if (functions is not null)
+            {
+                List<Converter>[]? converts = null;
+                Function? func = functions.FirstOrDefault(f => f.name.StartsWith($"{name}_{funcName}") && (converts = f.CanExecute(args)) is not null);
+                if (func is not null && converts is not null)
+                    return new() { new(this, func, converts) };
+            }
+            return extend?.GetFunctions(funcName, args) ?? new();
+        }
+
+        public IEnumerable<Class> inherits()
+        {
+            foreach (var c in inherit)
+                yield return c;
+            foreach (var c in inherit)
+                foreach (var c2 in c.inherits())
+                    yield return c2;
+        }
+
+        public virtual void Compile(string tabs, StreamWriter sw)
         {
             sw.WriteLine($$"""{{tabs}}typedef struct {{name}} {""");
-            List<string> temp = new();
-            var e = extend;
-            while (e is not null)
-            {
-                int i = 0;
-                foreach (var v in e.variables)
-                {
-                    temp.Insert(i, $"{tabs}\t{v.type.id} {v.name};");
-                    i++;
-                }
-                e = e.extend;
-            }
-            foreach (var v in temp)
-            {
-                sw.WriteLine(v);
-            }
-            foreach (var v in variables)
+            foreach (var v in allVariables)
             {
                 sw.WriteLine($"{tabs}\t{v.type.id} {v.name};");
             }
@@ -67,6 +85,10 @@
             foreach (var v in functions)
             {
                 v.Compile(tabs, sw);
+            }
+            if (typed is not null)
+            {
+                typed.Compile(tabs, sw);
             }
             foreach (var v in explicitCast)
             {

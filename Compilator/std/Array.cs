@@ -10,7 +10,7 @@
                     }, null)
         {
             constructs.Add(
-                new($"{name}_Construct", new("void"),
+                new($"{name}_Construct", this,
                 new Variable[] {
                 new( "len",size,false)
                 },

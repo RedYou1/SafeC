@@ -271,6 +271,73 @@ string[] splitArgs(string args)
     return r.ToArray();
 }
 
+void callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, List<Variable> variables, NamesManager variablesNamesManager)
+{
+    if (!funcs.Any())
+        throw new Exception("no function to call");
+
+    if (_class is null || _class is not Typed typed)
+    {
+        string funcLine = string.Empty;
+
+        if (!string.IsNullOrEmpty(variableName))
+            funcLine += $"{variableName}, ";
+
+        for (int i = 0; i < argsLine.Length; i++)
+        {
+            string r = Convert(argsLine[i], variables).var;
+            r = ConvertVariable(lines, variables, variablesNamesManager, funcs.First().converts[i], r);
+            funcLine += $"{r}, ";
+        }
+
+        if (funcLine.Length >= 2)
+            funcLine = funcLine.Substring(0, funcLine.Length - 2);
+
+        lines.Add(new FuncLine($"{prefix}{funcs.First().func.name}({funcLine})"));
+        return;
+    }
+    string pre = string.Empty;
+
+    foreach (ToCallFunc func in funcs)
+    {
+        if (func.of is null)
+            continue;
+
+        lines.Add(new FuncLine2($"{pre}if ({variableName}->type == Extend${typed.contain.name}${func.of.name}) {{"));
+
+        string funcLine = $"\t{prefix}{func.func.name}({variableName}->ptr";
+
+        for (int i = 1; i < func.converts.Length; i++)
+        {
+            string r = Convert(argsLine[i - 1], variables).var;
+            r = ConvertVariable(lines, variables, variablesNamesManager, func.converts[i], r);
+            funcLine += $", {r}";
+        }
+
+        lines.Add(new FuncLine($"{funcLine})"));
+        lines.Add(new FuncLine2("}"));
+        pre = "else ";
+    }
+
+    ToCallFunc? f = funcs.FirstOrDefault(f => _class is not Typed typed || f.of is null);
+    if (f is not null)
+    {
+        lines.Add(new FuncLine2("else {"));
+
+        string funcLine = $"\t{prefix}{f.func.name}({variableName}->ptr";
+
+        for (int i = 1; i < f.converts.Length; i++)
+        {
+            string r = Convert(argsLine[i - 1], variables).var;
+            r = ConvertVariable(lines, variables, variablesNamesManager, f.converts[i], r);
+            funcLine += $", {r}";
+        }
+
+        lines.Add(new FuncLine($"{funcLine})"));
+        lines.Add(new FuncLine2("}"));
+    }
+}
+
 void ReadBlock(string name, RedRust.Type returnType, bool constructor, string tabs, Class? className, IEnumerator<string> enumarator, List<Token> lines, List<Variable> paramameters, List<Variable> variables, NamesManager variablesNamesManager)
 {
     bool moveOk = enumarator.MoveNext();
@@ -327,27 +394,17 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                     {
                         args.Add(Convert(a, variables).type!);
                     }
-                    var func = GetFunction(_class, funcName, args.ToArray());
+                    var func = GetFunctions(_class, funcName, args.ToArray());
                     line = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 4);
-                    string funcLine = $"{func.func.name}({variable.name}";
 
-                    if (argsLine.Length + 1 != func.converts.Length)
-                        throw new Exception("not right amount of args");
-                    for (int i = 1; i < func.converts.Length; i++)
-                    {
-                        string r = Convert(argsLine[i - 1], variables).var;
-                        r = ConvertVariable(lines, variables, variablesNamesManager, func.converts[i], r);
-                        funcLine += $", {r}";
-                    }
-
-                    lines.Add(new FuncLine($"{funcLine})"));
+                    callFunctions(string.Empty, _class, lines, func, argsLine, variable.name, variables, variablesNamesManager);
                 }
-                else if (_class.variables.Any(v => v.name.Equals(funcName)))
+                else if (_class.allVariables.Any(v => v.name.Equals(funcName)))
                 {
                     // = 
                     var v = Convert($"{variable.name}.{funcName}", variables);
                     if (!constructor && v.type is not null && v.type.CanDeconstruct)
-                        deleteVar(_class.variables.First(v => v.name.Equals(funcName)), lines, line);
+                        deleteVar(_class.allVariables.First(v => v.name.Equals(funcName)), lines, line);
 
                     string[] e = line.Split(" = ");
                     AssignVariable(variables, variablesNamesManager, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, constructor);
@@ -466,6 +523,24 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             }
             lines.Add(new FuncLine($"{funcLine})"));
         }
+        else if (line.Contains("("))
+        {
+            string funcName = line.Split('(')[0].Split(' ')[0];
+
+            var args = new List<RedRust.Type>();
+            var afterEqual = line.Substring(funcName.Length + 1, line.Length - funcName.Length - 3);
+            var stringargs = splitArgs(afterEqual);
+            foreach (var a in stringargs)
+            {
+                args.Add(Convert(a, variables).type!);
+            }
+            List<Converter>[]? converts = null;
+            Function? func = globalFunction.FirstOrDefault(f => f.name.StartsWith(funcName) && (converts = f.CanExecute(args.ToArray())) is not null);
+            if (func is not null && converts is not null)
+                callFunctions(string.Empty, null, lines, new() { new(null, func, converts) }, stringargs, string.Empty, variables, variablesNamesManager);
+            else
+                throw new Exception("not implemented");
+        }
         else
             throw new Exception($"func line couldnt be interpreted:{line}");
 
@@ -476,26 +551,15 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
         throw new Exception("no return when needed");
 }
 
-(Function func, List<Converter>[] converts) GetFunction(Class _class, string funcName, RedRust.Type[] args)
+List<ToCallFunc> GetFunctions(Class _class, string funcName, RedRust.Type[] args)
 {
-    Class? e = _class;
+    List<ToCallFunc> r = _class.GetFunctions(funcName, args);
+
     List<Converter>[]? converts = null;
-    Function? func = null;
-    while (e is not null)
-    {
-        if (e.functions is not null)
-        {
-            converts = null;
-            func = e.functions.FirstOrDefault(f => f.name.StartsWith($"{e.name}_{funcName}") && (converts = f.CanExecute(args)) is not null);
-            if (func is not null && converts is not null)
-                return (func, converts);
-        }
-        e = e.extend;
-    }
-    func = globalFunction.FirstOrDefault(f => f.name.StartsWith(funcName) && (converts = f.CanExecute(args)) is not null);
+    Function? func = globalFunction.FirstOrDefault(f => f.name.StartsWith(funcName) && (converts = f.CanExecute(args)) is not null);
     if (func is not null && converts is not null)
-        return (func, converts);
-    throw new Exception($"cant find value {funcName} in object of type {_class.name}");
+        r.Add(new(null, func, converts));
+    return r;
 }
 
 void AssignVariable(List<Variable> variables, NamesManager variablesNamesManager, List<Token> lines, string preEqual, string afterEqual, RedRust.Type type, bool constructor)
@@ -503,8 +567,7 @@ void AssignVariable(List<Variable> variables, NamesManager variablesNamesManager
     if (afterEqual.EndsWith(");"))
     {
         Class _class = type.AsClass();
-        List<Converter>[]? converts = null;
-        Function? function = null;
+        List<ToCallFunc> function = new();
         string[] stringargs;
 
         if (afterEqual.StartsWith("new "))
@@ -515,9 +578,11 @@ void AssignVariable(List<Variable> variables, NamesManager variablesNamesManager
 
             RedRust.Type[] args = stringargs.Select(a => Convert(a, variables).type!).ToArray();
 
-            function = _class.constructs.FirstOrDefault(f => (converts = f.CanExecute(args)) is not null);
+            List<Converter>[]? converts = null;
+            var f = _class.constructs.FirstOrDefault(f => (converts = f.CanExecute(args)) is not null);
             if (function is null || converts is null)
                 throw new Exception($"constructor not found in class {_class.name}");
+            function = new() { new(_class, f!, converts) };
         }
         else
         {
@@ -530,22 +595,15 @@ void AssignVariable(List<Variable> variables, NamesManager variablesNamesManager
             {
                 args.Add(Convert(a, variables).type!);
             }
-            var func = GetFunction(_class, funcName, args.ToArray());
-            function = func.func;
-            converts = func.converts;
+            function = GetFunctions(_class, funcName, args.ToArray());
         }
 
-        string funcLine = $"{preEqual}{function.name}(";
-        if (stringargs.Length != converts.Length)
-            throw new Exception("not right amount of args");
-        for (int i = 0; i < converts.Length; i++)
+        if (function.Count == 1)
         {
-            string r = Convert(stringargs[i], variables).var;
-            r = ConvertVariable(lines, variables, variablesNamesManager, converts[i], r);
-            funcLine += $"{r}, ";
+            callFunctions(preEqual, _class, lines, function, stringargs, string.Empty, variables, variablesNamesManager);
         }
-
-        lines.Add(new FuncLine($"{funcLine.Substring(0, funcLine.Length - (converts.Length > 0 ? 2 : 0))})"));
+        else
+            throw new Exception("not implemented");
     }
     else//number
     {
@@ -615,6 +673,7 @@ IEnumerable<Token> Interpret(string pathin)
 
             Class c = new Class(name, variables.ToArray(), extend);
             types.Add(name, c);
+            extend?.inherit.Add(c);
 
             do
             {
@@ -669,10 +728,11 @@ using StreamWriter f = File.CreateText(@"..\..\..\testC\testC.c");
 f.WriteLine("#include <stdio.h>");
 f.WriteLine("#include <stdlib.h>");
 f.WriteLine("#include <string.h>");
-f.WriteLine("typedef enum { false, true } bool;");
+f.WriteLine("typedef enum bool { false, true } bool;");
 _string.Compile(string.Empty, f);
 _str.explicitCast[0].converter.Compile(string.Empty, f);
-foreach (var t in Interpret(@"..\..\..\testRedRust\main.rr"))
+var tokens = Interpret(@"..\..\..\testRedRust\main.rr").ToArray();
+foreach (var t in tokens)
 {
     t.Compile(string.Empty, f);
 }
@@ -755,6 +815,17 @@ RedRust.Type? GetType(string typeName)
     {
         typeName = typeName.Substring(1);
         t.Add((RedRust.Type type) => new Reference(type));
+    }
+    if (typeName.StartsWith("typedyn "))
+    {
+        typeName = typeName.Substring(8);
+        t.Add((RedRust.Type type) =>
+        {
+            Class c = type.AsClass()!;
+            if (c.typed is null)
+                c.typed = new Typed(c, new(c));
+            return c.typed;
+        });
     }
     if (typeName.StartsWith("dyn "))
     {

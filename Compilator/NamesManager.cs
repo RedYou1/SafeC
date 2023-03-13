@@ -26,6 +26,7 @@
                     names.Add(newName);
                     return newName;
                 }
+                i++;
             }
         }
     }

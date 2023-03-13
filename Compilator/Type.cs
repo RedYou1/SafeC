@@ -49,7 +49,40 @@
                     return new() { Converter.NewExplicit(t) };
                 }
             }
+
+            if (this is Typed _class && other is Class _other)
+            {
+                if (_class.contain.Equals(other))
+                {
+                    return typedynCast(_class, _other);
+                }
+                foreach (var o in _class.contain.inherits())
+                {
+                    if (o.Equals(other))
+                    {
+                        return typedynCast(_class, _other);
+                    }
+                }
+            }
+
             return null;
+        }
+
+        private List<Converter>? typedynCast(Typed _class, Class _other)
+        {
+            if (_other.explicitCast.Any(e => e.converter.returnType.Equals(_class)))
+                return new() { Converter.NewExplicit(_other.explicitCast.First(e => e.converter.returnType.Equals(_class))) };
+
+            (Function converter, bool toDelete) a =
+                (new Function($"{_other.name}_to_{_class.name}", _class,
+                new Variable[] { new("this", _other, false) },
+                    new FuncLine($"{_class.id} t = ({_class.id})malloc(sizeof({_class.name}))"),
+                    new FuncLine("t->ptr = this"),
+                    new FuncLine($"t->type = {_class.typeEnum.id}${_other.name}"),
+                    new FuncLine("return t")
+                ), true);
+            _other.explicitCast.Add(a);
+            return new() { Converter.NewExplicit(a) };
         }
 
         public static string deReference(string arg)
