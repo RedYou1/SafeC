@@ -73,7 +73,7 @@ foreach (var type in types)
 
 char[] operators = new char[] { '+', '-', '*', '-' };
 
-(RedRust.Type? type, string var) Convert(string var, List<Variable> variables)
+(RedRust.Type? type, string var) Convert(string var, VariableManager variables)
 {
     foreach (char c in operators)
         if (var.Contains($" {c} "))
@@ -129,7 +129,7 @@ char[] operators = new char[] { '+', '-', '*', '-' };
     else if (double.TryParse(var, out _))
         type = f64;
     else
-        type = variables.FirstOrDefault(v => v.name.Equals(vars[0]))?.type;
+        type = variables.GetName(vars[0])?.type;
 
     if (vars.Length == 1)
         return (type, r);
@@ -223,23 +223,23 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
         paramameters.Add(new(v.Last(), t, false)); // TODO could take ownership
     }
 
-    NamesManager variablesNamesManager = new();
-    List<Variable> variables = new();
+    VariableManager variables = new();
     List<Token> lines = new();
     if (constructor)
     {
-        variables.Add(new(variablesNamesManager.Ask("this"), className!, false));
+        variables.Add("this", s => new(s, className!, false));
     }
 
     foreach (var var in paramameters)
     {
-        variables.Add(new(var.name, var.type, var.toDelete));//Clone if variable change ownership
+        variables.Add(var.name, s => new(s, var.type, var.toDelete));//Clone if variable change ownership
     }
 
-    ReadBlock(name, returnType, constructor, tabs, className, enumarator, lines, paramameters, variables, variablesNamesManager);
+    bool r = ReadBlock(name, returnType, constructor, tabs, className, enumarator, lines, paramameters, variables);
 
-    if (returnType == types["void"])
-        endFunction(variables, lines, null);
+    if (!r)
+        foreach (Variable v in variables.Variables)
+            deleteVar(v, lines, null);
 
     if (constructor)
         lines.Add(new FuncLine($"return this"));
@@ -271,7 +271,7 @@ string[] splitArgs(string args)
     return r.ToArray();
 }
 
-void callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, List<Variable> variables, NamesManager variablesNamesManager)
+void callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, VariableManager variables)
 {
     if (!funcs.Any())
         throw new Exception("no function to call");
@@ -286,7 +286,7 @@ void callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallF
         for (int i = 0; i < argsLine.Length; i++)
         {
             string r = Convert(argsLine[i], variables).var;
-            r = ConvertVariable(lines, variables, variablesNamesManager, funcs.First().converts[i], r);
+            r = ConvertVariable(lines, variables, funcs.First().converts[i], r).toPut;
             funcLine += $"{r}, ";
         }
 
@@ -310,7 +310,7 @@ void callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallF
         for (int i = 1; i < func.converts.Length; i++)
         {
             string r = Convert(argsLine[i - 1], variables).var;
-            r = ConvertVariable(lines, variables, variablesNamesManager, func.converts[i], r);
+            r = ConvertVariable(lines, variables, func.converts[i], r).toPut;
             funcLine += $", {r}";
         }
 
@@ -329,7 +329,7 @@ void callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallF
         for (int i = 1; i < f.converts.Length; i++)
         {
             string r = Convert(argsLine[i - 1], variables).var;
-            r = ConvertVariable(lines, variables, variablesNamesManager, f.converts[i], r);
+            r = ConvertVariable(lines, variables, f.converts[i], r).toPut;
             funcLine += $", {r}";
         }
 
@@ -338,13 +338,13 @@ void callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallF
     }
 }
 
-void ReadBlock(string name, RedRust.Type returnType, bool constructor, string tabs, Class? className, IEnumerator<string> enumarator, List<Token> lines, List<Variable> paramameters, List<Variable> variables, NamesManager variablesNamesManager)
+bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string tabs, Class? className, IEnumerator<string> enumarator, List<Token> lines, List<Variable> paramameters, VariableManager variables)
 {
     bool moveOk = enumarator.MoveNext();
     while (moveOk)
     {
         if (enumarator.Current is null)
-            return;
+            return false;
         if (string.IsNullOrWhiteSpace(enumarator.Current))
         {
             moveOk = enumarator.MoveNext();
@@ -366,16 +366,15 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
 
                 string varName = firstSplit.Last();
 
-                AssignVariable(variables, variablesNamesManager, lines, $"{type.id} {varName} = ", equal[1], type, constructor);
-                variables.Add(new(varName, type, true));
+                AssignVariable(variables, true, lines, $"{type.id} {varName} = ", equal[1], type, constructor);
+                variables.Add(varName, s => new(s, type, true));
                 moveOk = enumarator.MoveNext();
                 continue;
             }
         }
 
-        if (variables.Any(x => line.StartsWith(x.name)))// variable...
+        if (variables.GetFunc(v => line.StartsWith(v.name), out Variable? variable) && variable is not null)// variable...
         {
-            var variable = variables.First(x => line.StartsWith(x.name));
             line = line.Substring(variable.name.Length);
 
             Class? _class = variable.type.AsClass();
@@ -397,7 +396,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                     var func = GetFunctions(_class, funcName, args.ToArray());
                     line = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 4);
 
-                    callFunctions(string.Empty, _class, lines, func, argsLine, variable.name, variables, variablesNamesManager);
+                    callFunctions(string.Empty, _class, lines, func, argsLine, variable.name, variables);
                 }
                 else if (_class.allVariables.Any(v => v.name.Equals(funcName)))
                 {
@@ -407,7 +406,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                         deleteVar(_class.allVariables.First(v => v.name.Equals(funcName)), lines, line);
 
                     string[] e = line.Split(" = ");
-                    AssignVariable(variables, variablesNamesManager, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, constructor);
+                    AssignVariable(variables, false, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, constructor);
                 }
                 else
                     throw new Exception($"cant find value {funcName} in object of type {_class.name} named {variable.name}");
@@ -416,26 +415,28 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             {
                 if (variable.toDelete)
                     deleteVar(variable, lines, line);
-                AssignVariable(variables, variablesNamesManager, lines, $"{variable.name} = ", line.Substring(3), variable.type, constructor);
+                AssignVariable(variables, true, lines, $"{variable.name} = ", line.Substring(3), variable.type, constructor);
             }
         }
         else if (line.StartsWith("return "))
         {
             line = line.Substring(7);
-            endFunction(variables, lines, line);
 
-            AssignVariable(variables, variablesNamesManager, lines, $"return ", line, returnType, constructor);
+            foreach (Variable vs in variables.Variables)
+                deleteVar(vs, lines, line);
+
+            AssignVariable(variables, false, lines, $"return ", line, returnType, constructor);
 
             while (enumarator.MoveNext())
             {
                 if (enumarator.Current is null)
-                    return;
+                    return true;
                 if (string.IsNullOrWhiteSpace(enumarator.Current))
                     continue;
                 if (!enumarator.Current.StartsWith($"{tabs}\t"))
-                    return;
+                    return true;
             }
-            return;
+            return true;
         }
         else if (line.StartsWith("if"))
         {
@@ -451,16 +452,29 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             lines.Add(new FuncLine2($"if ({v.var} != NULL) {{"));
             _null.isNull = false;
             List<Token> l2 = new();
-            ReadBlock(name, returnType, constructor, $"{tabs}\t", className, enumarator, l2, paramameters, variables, variablesNamesManager);
+            variables.Push();
+            bool r = ReadBlock(name, returnType, constructor, $"{tabs}\t", className, enumarator, l2, paramameters, variables);
             lines.Add(new FuncBlock(l2.ToArray()));
+
+
+            foreach (Variable vs in r ? variables.Variables : variables.Peek)
+                deleteVar(vs, lines, line);
+            variables.Pop();
+
             lines.Add(new FuncLine2("}"));
             _null.isNull = true;
             if (!enumarator.Current.Substring(tabs.Length + 1).StartsWith("else"))
                 continue;
             lines.Add(new FuncLine2($"else {{"));
             l2 = new();
-            ReadBlock(name, returnType, constructor, $"{tabs}\t", className, enumarator, l2, paramameters, variables, variablesNamesManager);
+            variables.Push();
+            r = ReadBlock(name, returnType, constructor, $"{tabs}\t", className, enumarator, l2, paramameters, variables);
             lines.Add(new FuncBlock(l2.ToArray()));
+
+            foreach (Variable vs in r ? variables.Variables : variables.Peek)
+                deleteVar(vs, lines, line);
+            variables.Pop();
+
             lines.Add(new FuncLine2("}"));
             continue;
         }
@@ -480,7 +494,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                 {
                     string r = v.var;
 
-                    r = ConvertVariable(lines, variables, variablesNamesManager, i.Item1, r);
+                    r = ConvertVariable(lines, variables, i.Item1, r).toPut;
 
                     lines.Add(new FuncLine($"printf(\"%{i.Item2}\", {r})"));
                     notdone = false;
@@ -491,9 +505,9 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
         }
         else if (line.StartsWith("base("))
         {
-            if (!variables.Any(v => v.name.Equals("this") && v.type is Class _class && _class.extend is not null))
+            if (!variables.Variables.Any(v => v.name.Equals("this") && v.type is Class _class && _class.extend is not null))
                 throw new Exception($"function base not supported in that context:{line}");
-            var v = variables.First(v => v.name.Equals("this") && v.type is Class _class && _class.extend is not null);
+            var v = variables.Variables.First(v => v.name.Equals("this") && v.type is Class _class && _class.extend is not null);
             string funcName = line.Split('(')[0];
             line = line.Substring(funcName.Length + 1, line.Length - funcName.Length - 3);
 
@@ -518,7 +532,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             for (int i = 1; i < converts.Length; i++)
             {
                 string r = Convert(stringargs[i - 1], variables).var;
-                r = ConvertVariable(lines, variables, variablesNamesManager, converts[i], r);
+                r = ConvertVariable(lines, variables, converts[i], r).toPut;
                 funcLine += $", {r}";
             }
             lines.Add(new FuncLine($"{funcLine})"));
@@ -537,7 +551,7 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             List<Converter>[]? converts = null;
             Function? func = globalFunction.FirstOrDefault(f => f.name.StartsWith(funcName) && (converts = f.CanExecute(args.ToArray())) is not null);
             if (func is not null && converts is not null)
-                callFunctions(string.Empty, null, lines, new() { new(null, func, converts) }, stringargs, string.Empty, variables, variablesNamesManager);
+                callFunctions(string.Empty, null, lines, new() { new(null, func, converts) }, stringargs, string.Empty, variables);
             else
                 throw new Exception("not implemented");
         }
@@ -549,6 +563,8 @@ void ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
 
     if (!constructor && returnType != types["void"])
         throw new Exception("no return when needed");
+
+    return false;
 }
 
 List<ToCallFunc> GetFunctions(Class _class, string funcName, RedRust.Type[] args)
@@ -562,7 +578,7 @@ List<ToCallFunc> GetFunctions(Class _class, string funcName, RedRust.Type[] args
     return r;
 }
 
-void AssignVariable(List<Variable> variables, NamesManager variablesNamesManager, List<Token> lines, string preEqual, string afterEqual, RedRust.Type type, bool constructor)
+void AssignVariable(VariableManager variables, bool toDelete, List<Token> lines, string preEqual, string afterEqual, RedRust.Type type, bool constructor)
 {
     if (afterEqual.EndsWith(");"))
     {
@@ -600,7 +616,7 @@ void AssignVariable(List<Variable> variables, NamesManager variablesNamesManager
 
         if (function.Count == 1)
         {
-            callFunctions(preEqual, _class, lines, function, stringargs, string.Empty, variables, variablesNamesManager);
+            callFunctions(preEqual, _class, lines, function, stringargs, string.Empty, variables);
         }
         else
             throw new Exception("not implemented");
@@ -614,9 +630,10 @@ void AssignVariable(List<Variable> variables, NamesManager variablesNamesManager
         if (converts is null)
             throw new Exception("cant convert type");
 
-        string r = t.var;
-        r = ConvertVariable(lines, variables, variablesNamesManager, converts, r);
-        lines.Add(new FuncLine($"{preEqual}{r}"));
+        var r = ConvertVariable(lines, variables, converts, t.var);
+        if (r.last is not null && r.last.toDelete && !toDelete)
+            r.last.toDelete = false;
+        lines.Add(new FuncLine($"{preEqual}{r.toPut}"));
     }
 }
 
@@ -767,43 +784,37 @@ static void deleteVar(Variable variable, List<Token> lines, string? line)
     }
 }
 
-static void endFunction(List<Variable> variables, List<Token> lines, string? line)
+(string toPut, Variable? last) ConvertVariable(List<Token> lines, VariableManager variables, List<Converter> convert, string r)
 {
-    foreach (var variable in variables)
-    {
-        deleteVar(variable, lines, line);
-    }
-}
-
-string ConvertVariable(List<Token> lines, List<Variable> variables, NamesManager variablesNamesManager, List<Converter> convert, string r)
-{
+    Variable? last = null;
     foreach (Converter f in convert.ToArray().Reverse())
     {
         if (f.state == ConverterEnum.Success)
             continue;
         if (f.state == ConverterEnum.ToNull)
         {
-            string varname = variablesNamesManager.Ask("Converter");
             var type = Convert(r, variables).type!;
-            variables.Add(new(varname, type, false));
-            lines.Add(new FuncLine($"{f._null!.id} {varname} = {r}"));
-            r = $"&{varname}";
+            last = variables.Add("Converter", s => new(s, type, false));
+            lines.Add(new FuncLine($"{f._null!.id} {last.name} = {r}"));
+            r = $"&{last.name}";
         }
         else if (f.state == ConverterEnum.Implicit)
             r = f._implicit!(r);
         else if (f._explicit!.Value.toDelete)
         {
-            string varname = variablesNamesManager.Ask("Converter");
-            variables.Add(new(varname, f._explicit.Value.converter.returnType, true));
+            if (last is not null)
+                last.toDelete = false;
+
+            last = variables.Add("Converter", s => new(s, f._explicit.Value.converter.returnType, true));
             lines.Add(new FuncLine(
-                $"{f._explicit.Value.converter.returnType.id} {varname} = {f._explicit.Value.converter.name}({r})"));
-            r = varname;
+                $"{f._explicit.Value.converter.returnType.id} {last.name} = {f._explicit.Value.converter.name}({r})"));
+            r = last.name;
         }
         else
             r = $"{f._explicit.Value.converter.name}({r})";
     }
 
-    return r;
+    return (r, last);
 }
 
 RedRust.Type? GetType(string typeName)
