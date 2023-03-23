@@ -239,7 +239,7 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
 
     if (!r)
         foreach (Variable v in variables.Variables)
-            deleteVar(v, lines, null);
+            v.DeleteVar(lines, null);
 
     if (constructor)
         lines.Add(new FuncLine($"return this"));
@@ -403,7 +403,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                     // = 
                     var v = Convert($"{variable.name}.{funcName}", variables);
                     if (!constructor && v.type is not null && v.type.CanDeconstruct)
-                        deleteVar(_class.allVariables.First(v => v.name.Equals(funcName)), lines, line);
+                        _class.allVariables.First(v => v.name.Equals(funcName)).DeleteVar(lines, line);
 
                     string[] e = line.Split(" = ");
                     AssignVariable(variables, false, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, constructor);
@@ -414,7 +414,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             else//reassign
             {
                 if (variable.toDelete)
-                    deleteVar(variable, lines, line);
+                    variable.DeleteVar(lines, line);
                 AssignVariable(variables, true, lines, $"{variable.name} = ", line.Substring(3), variable.type, constructor);
             }
         }
@@ -423,7 +423,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             line = line.Substring(7);
 
             foreach (Variable vs in variables.Variables)
-                deleteVar(vs, lines, line);
+                vs.DeleteVar(lines, line);
 
             AssignVariable(variables, false, lines, $"return ", line, returnType, constructor);
 
@@ -458,7 +458,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
 
 
             foreach (Variable vs in r ? variables.Variables : variables.Peek)
-                deleteVar(vs, lines, line);
+                vs.DeleteVar(lines, line);
             variables.Pop();
 
             lines.Add(new FuncLine2("}"));
@@ -472,7 +472,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             lines.Add(new FuncBlock(l2.ToArray()));
 
             foreach (Variable vs in r ? variables.Variables : variables.Peek)
-                deleteVar(vs, lines, line);
+                vs.DeleteVar(lines, line);
             variables.Pop();
 
             lines.Add(new FuncLine2("}"));
@@ -752,36 +752,6 @@ var tokens = Interpret(@"..\..\..\testRedRust\main.rr").ToArray();
 foreach (var t in tokens)
 {
     t.Compile(string.Empty, f);
-}
-
-static void deleteVar(Variable variable, List<Token> lines, string? line)
-{
-    string pre = string.Empty;
-    var _class = variable.type.AsClass();
-
-    if (variable.toDelete && _class is not null && (line is null || !variable.name.Equals(line.Substring(0, line.Length - 1))))
-    {
-        var t = variable.type;
-        while (t is Modifier mod)
-        {
-            if (mod is RedRust.Nullable n)
-            {
-                if (n.isNull)
-                {
-                    lines.Add(new FuncLine2($"if ({variable.name} != NULL) {{"));
-                    pre = "\t";
-                }
-                break;
-            }
-            t = mod.of;
-        }
-
-        lines.Add(new FuncLine($"{pre}{_class.name}_DeConstruct({variable.name})"));
-
-        if (t is RedRust.Nullable n2)
-            if (n2.isNull)
-                lines.Add(new FuncLine2($"}}"));
-    }
 }
 
 (string toPut, Variable? last) ConvertVariable(List<Token> lines, VariableManager variables, List<Converter> convert, string r)
