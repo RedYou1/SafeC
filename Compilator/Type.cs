@@ -21,14 +21,25 @@
             explicitCast = new();
         }
 
+        public bool isReference()
+            => this is Reference || (this is Dynamic dyn && dyn.of is Reference) || (this is Typed t && t.contain.isReference());
+
         public bool TypeEquals(Type e)
         => Equals(e) ||
                 (this is Nullable n2 && (e is Null || (e is Nullable n3 && n2.of.Equals(n3.of))));
 
         public virtual List<Converter>? Equivalent(Type other)
         {
-            if (TypeEquals(other))
-                return new() { Converter.Success };
+            {
+                Type a = this;
+                Type b = other;
+                if (this is Reference t)
+                    a = t.of;
+                if (other is Reference t2)
+                    b = t2.of;
+                if (a.TypeEquals(b))
+                    return new() { Converter.Success };
+            }
 
             if (this is Nullable n && n.of.Equals(other))
                 return new() { other is Pointer ? Converter.Success : Converter.NewNull(n.of) };
@@ -75,7 +86,7 @@
 
             (Function converter, bool toDelete) a =
                 (new Function($"{_other.name}_to_{_class.name}", _class,
-                new Variable[] { new("this", _other, false) },
+                new Variable[] { new("this", _other, new()) },
                     new FuncLine($"{_class.id} t = ({_class.id})malloc(sizeof({_class.name}))"),
                     new FuncLine("t->ptr = this"),
                     new FuncLine($"t->type = {_class.typeEnum.id}${_other.name}"),

@@ -7,6 +7,7 @@
         public Nullable(Type of, bool isNull) : base(of)
         {
             this.isNull = isNull;
+            CanDeconstruct = of.CanDeconstruct;
         }
     }
 

@@ -56,13 +56,16 @@ fn C createC(i32? a,str id):
 fn void Add(&typedyn A a):
 	a.Add();
 
+fn void TakeOwner(A a):
+	print(a.a);
+	print("\n");
+
 fn i32 main():
 	A aa = new A();
 	print(aa.a);
 	print("\n");
 	Add(aa);
-	print(aa.a);
-	print("\n");
+	TakeOwner(aa);
 
 	C a = createC(null,"ID");
 	print(a.id);

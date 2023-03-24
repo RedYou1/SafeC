@@ -59,9 +59,7 @@
         {
             sw.WriteLine($$"""{{tabs}}typedef struct {{name}} {""");
             foreach (var v in allVariables)
-            {
                 sw.WriteLine($"{tabs}\t{v.type.id} {v.name};");
-            }
             sw.WriteLine($$"""{{tabs}}}{{name}};""");
 
             foreach (var v in constructs)
@@ -70,9 +68,9 @@
             }
 
             sw.WriteLine($"{tabs}void {name}_DeConstruct({id} this) {{");
-            foreach (var line in variables)
+            foreach (Variable line in variables)
             {
-                if (!line.toDelete)
+                if (line.type.isReference())
                     continue;
                 if (line.type is Class _class)
                     sw.WriteLine($"{tabs}\t{_class.name}_DeConstruct(this->{line.name});");

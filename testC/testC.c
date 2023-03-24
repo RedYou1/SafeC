@@ -165,6 +165,12 @@ void Add(Typed$A* a) {
 	else if (a->type == Extend$A$C) {
 		C_Add(a->ptr);
 	}
+	Typed$A_DeConstruct(a);
+}
+void TakeOwner(A* a) {
+	printf("%i", a->a);
+	printf("\n");
+	A_DeConstruct(a);
 }
 int main() {
 	A* aa = A_Construct();
@@ -172,8 +178,7 @@ int main() {
 	printf("\n");
 	Typed$A* Converter = A_to_Typed$A(aa);
 	Add(Converter);
-	printf("%i", aa->a);
-	printf("\n");
+	TakeOwner(aa);
 	C* a = createC(NULL, "ID");
 	printf("%s", a->id);
 	printf(":\n");
@@ -203,10 +208,7 @@ int main() {
 	}
 	b = createB();
 	B_Print(b);
-	A_DeConstruct(aa);
-	Typed$A_DeConstruct(Converter);
 	C_DeConstruct(a);
-	Typed$A_DeConstruct(Converter2);
 	if (b != NULL) {
 		B_DeConstruct(b);
 	}

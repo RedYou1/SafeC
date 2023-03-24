@@ -7,17 +7,20 @@
         public Typed(Class of, TypeEnum typeEnum)
             : base($"Typed${of.name.Replace('*', '$')}",
                   new Variable[] {
-                      new("ptr",of,false),
-                      new("type",typeEnum,false)
+                      new("ptr",new Reference(of),new()),
+                      new("type",typeEnum,null)
                     }, null)
         {
+            variables[1].lifeTime = variables[0].lifeTime;
+
             contain = of;
             this.typeEnum = typeEnum;
+            LifeTime cc = new();
             constructs.Add(
                 new($"{name}_Construct", this,
                 new Variable[] {
-                new( "ptr",of,false),
-                new("type",typeEnum,false)
+                new( "ptr",new Reference(of),cc),
+                new("type",typeEnum,cc)
                 },
                 new FuncLine($"{id} this = ({id})malloc(sizeof({name}))"),
                 new FuncLine("this->ptr = ptr"),

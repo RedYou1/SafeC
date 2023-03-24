@@ -4,26 +4,36 @@
     {
         public readonly string name;
         public readonly Type type;
-        public bool toDelete;
+        public LifeTime lifeTime;
 
-        public Variable(string name, Type type, bool toDelete)
+        public Variable(string name, Type type, LifeTime lifeTime)
         {
             this.name = name;
             this.type = type;
-            this.toDelete = toDelete;
+            this.lifeTime = lifeTime;
         }
 
-        public void DeleteVar(List<Token> lines, string? line)
+        public void DeleteVar(LifeTime current, List<Token> lines, string? line)
         {
+            if (type.isReference())
+                return;
+            if (lifeTime != current)
+                return;
+            if (!type.CanDeconstruct)
+                return;
+
             string pre = string.Empty;
             var _class = type.AsClass();
 
-            if (toDelete && _class is not null && (line is null || !name.Equals(line.Substring(0, line.Length - 1))))
+            if (_class is null)
+                return;
+
+            if (line is null || !name.Equals(line.Substring(0, line.Length - 1)))
             {
                 var t = type;
                 while (t is Modifier mod)
                 {
-                    if (mod is RedRust.Nullable n)
+                    if (mod is Nullable n)
                     {
                         if (n.isNull)
                         {
