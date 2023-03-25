@@ -73,14 +73,14 @@ foreach (var type in types)
 
 char[] operators = new char[] { '+', '-', '*', '-' };
 
-(RedRust.Type? type, string var) Convert(string var, VariableManager variables)
+(RedRust.Type? type, LifeTime? lifeTime, string var) Convert(string var, VariableManager variables, LifeTime current)
 {
     foreach (char c in operators)
         if (var.Contains($" {c} "))
         {
             string[] args = var.Split($" {c} ");
-            var a = Convert(args[0], variables);
-            var b = Convert(args[1], variables);
+            var a = Convert(args[0], variables, current);
+            var b = Convert(args[1], variables, current);
 
             var ab = a.type.Equivalent(b.type);
             var ba = b.type.Equivalent(a.type);
@@ -94,12 +94,16 @@ char[] operators = new char[] { '+', '-', '*', '-' };
             else
                 min = b.type;
 
-            return (min, $"{a.var} {c} {b.var}");
+            int lifeA = a.lifeTime?.Length() ?? int.MaxValue;
+            int lifeB = b.lifeTime?.Length() ?? int.MaxValue;
+
+            return (min, lifeA <= lifeB ? a.lifeTime : b.lifeTime, $"{a.var} {c} {b.var}");
         }
 
     string[] vars = var.Split('.');
     string r = vars[0];
     RedRust.Type? type;
+    LifeTime? lifeTime = current;
     if (var.StartsWith("\'") && var.EndsWith("\'"))
         type = _char;
     else if (var.StartsWith("\"") && var.EndsWith("\""))
@@ -107,7 +111,7 @@ char[] operators = new char[] { '+', '-', '*', '-' };
     else if (var.Equals("true") || var.Equals("false"))
         type = u1;
     else if (var.Equals("null"))
-        return (Null.Instance, "NULL");
+        return (Null.Instance, current, "NULL");
     else if (sbyte.TryParse(var, out _))
         type = i8;
     else if (byte.TryParse(var, out _))
@@ -129,10 +133,17 @@ char[] operators = new char[] { '+', '-', '*', '-' };
     else if (double.TryParse(var, out _))
         type = f64;
     else
-        type = variables.GetName(vars[0])?.type;
+    {
+        var v1 = variables.GetName(vars[0], current);
+        type = v1?.type;
+        lifeTime = v1?.lifeTime;
+    }
 
     if (vars.Length == 1)
-        return (type, r);
+        return (type, lifeTime, r);
+    if (type is null)
+        throw new Exception("type is null");
+
     for (int i = 1; i < vars.Length; i++)
     {
         Class? _class = type.AsClass();
@@ -145,6 +156,7 @@ char[] operators = new char[] { '+', '-', '*', '-' };
             if (vars[i].EndsWith(")"))
             {
                 string name = vars[i].Split("(")[0];
+                //TODO call function
                 r = $"{_class.name}_{name}({r},{vars[i].Substring(name.Length + 1, vars[i].Length - name.Length - 2)})";
                 break;
             }
@@ -160,7 +172,7 @@ char[] operators = new char[] { '+', '-', '*', '-' };
         if (_class is null)
             throw new Exception($"cant convert {vars[i]} in type {type.id}");
     }
-    return (type, r);
+    return (type, lifeTime, r);
 }
 
 Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<string> enumarator)
@@ -280,9 +292,9 @@ string PutArgs(List<Converter>[] converts, string[] argsLine, List<Token> lines,
     string funcLine = string.Empty;
     for (int i = 0; i < argsLine.Length; i++)
     {
-        var t = Convert(argsLine[i], variables);
+        var t = Convert(argsLine[i], variables, current);
         var v = ConvertVariable(lines, variables, current, converts[i], t.var);
-        if (v.last is not null)
+        if (v.last is not null && !v.last.type.isReference())
             v.last.lifeTime = new(current);
         funcLine += $"{v.toPut}, ";
     }
@@ -382,7 +394,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             }
         }
 
-        if (variables.GetFunc(v => line.StartsWith(v.name), out Variable? variable) && variable is not null)// variable...
+        if (variables.GetFunc(v => line.StartsWith(v.name), current, out Variable? variable) && variable is not null)// variable...
         {
             line = line.Substring(variable.name.Length);
 
@@ -396,13 +408,13 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                 string funcName = line.Substring(1).Split('(')[0].Split(' ')[0];
                 if (line.ElementAt(funcName.Length + 1) == '(')
                 {
-                    var args = new List<RedRust.Type>() { variable.type };
+                    var args = new List<(RedRust.Type type, LifeTime lifeTime)>() { (variable.type, variable.lifeTime) };
                     var argsLine = splitArgs(line.Substring(funcName.Length + 2, line.Length - funcName.Length - 4));
                     foreach (var a in argsLine)
                     {
-                        args.Add(Convert(a, variables).type!);
+                        args.Add(ConvertToArgs(a, variables, current));
                     }
-                    var func = GetFunctions(_class, funcName, args.ToArray());
+                    var func = GetFunctions(_class, funcName, args.ToArray(), current);
                     line = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 4);
 
                     callFunctions(string.Empty, _class, lines, func, argsLine, variable.name, variables, current);
@@ -410,16 +422,15 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                 else if (_class.allVariables.Any(v => v.name.Equals(funcName)))
                 {
                     // = 
-                    var v = Convert($"{variable.name}.{funcName}", variables);
-                    Variable? r = null;
+                    var v = Convert($"{variable.name}.{funcName}", variables, current);
+                    Variable r = _class.allVariables.First(v => v.name.Equals(funcName));
                     if (!constructor && v.type is not null && v.type.CanDeconstruct)
-                    {
-                        r = _class.allVariables.First(v => v.name.Equals(funcName));
                         r.DeleteVar(current, lines, line);
-                    }
 
                     string[] e = line.Split(" = ");
-                    AssignVariable(variables, new(current), false, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, constructor);
+                    var l = AssignVariable(variables, current, false, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, constructor);
+                    if (l is not null)
+                        l.lifeTime = r.lifeTime;
                 }
                 else
                     throw new Exception($"cant find value {funcName} in object of type {_class.name} named {variable.name}");
@@ -461,7 +472,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             //if not null
             var cond = line.Split(" ")[1];
             cond = cond.Substring(0, cond.Length - 1);
-            var v = Convert(cond, variables);
+            var v = Convert(cond, variables, current);
             if (v.type is not RedRust.Nullable _null)
                 throw new Exception("not nullable");
 
@@ -500,9 +511,11 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
         }
         else if (line.StartsWith("print("))
         {
-            var v = Convert(line.Substring(6, line.Length - 8), variables);
+            var v = Convert(line.Substring(6, line.Length - 8), variables, current);
             if (v.type is null)
                 throw new Exception($"print dont recognize the type {v.type}");
+            if (!current.Ok(v.lifeTime))
+                throw new Exception("You dont have the ownership");
             bool notdone = true;
             var printTypes = new[] { (u64.Equivalent(v.type), "i"), (f64.Equivalent(v.type), "d"), (_str.Equivalent(v.type), "s") };
             foreach (var i in printTypes)
@@ -531,9 +544,9 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
 
             var stringargs = splitArgs(line);
 
-            List<RedRust.Type> args = new() { _class };
+            List<(RedRust.Type type, LifeTime lifeTime)> args = new() { (_class, v.lifeTime) };
             if (!string.IsNullOrWhiteSpace(line))
-                args.AddRange(stringargs.Select(a => Convert(a, variables).type!));
+                args.AddRange(stringargs.Select(a => ConvertToArgs(a, variables, current)));
 
 
             List<Converter>[]? converts = null;
@@ -547,7 +560,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                 throw new Exception("not right amount of args");
             for (int i = 1; i < converts.Length; i++)
             {
-                string r = Convert(stringargs[i - 1], variables).var;
+                string r = Convert(stringargs[i - 1], variables, current).var;
                 r = ConvertVariable(lines, variables, current, converts[i], r).toPut;
                 funcLine += $", {r}";
             }
@@ -557,12 +570,12 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
         {
             string funcName = line.Split('(')[0].Split(' ')[0];
 
-            var args = new List<RedRust.Type>();
+            var args = new List<(RedRust.Type type, LifeTime lifeTime)>();
             var afterEqual = line.Substring(funcName.Length + 1, line.Length - funcName.Length - 3);
             var stringargs = splitArgs(afterEqual);
             foreach (var a in stringargs)
             {
-                args.Add(Convert(a, variables).type!);
+                args.Add(ConvertToArgs(a, variables, current));
             }
             List<Converter>[]? converts = null;
             Function? func = globalFunction.FirstOrDefault(f => f.name.StartsWith(funcName) && (converts = f.CanExecute(args.ToArray())) is not null);
@@ -583,9 +596,17 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
     return false;
 }
 
-List<ToCallFunc> GetFunctions(Class _class, string funcName, RedRust.Type[] args)
+(RedRust.Type type, LifeTime lifeTime) ConvertToArgs(string var, VariableManager variables, LifeTime current)
 {
-    List<ToCallFunc> r = _class.GetFunctions(funcName, args);
+    var v = Convert(var, variables, current);
+    if (!current.Ok(v.lifeTime))
+        throw new Exception("You dont have the ownership");
+    return (v.type, v.lifeTime);
+}
+
+List<ToCallFunc> GetFunctions(Class _class, string funcName, (RedRust.Type type, LifeTime lifeTime)[] args, LifeTime current)
+{
+    List<ToCallFunc> r = _class.GetFunctions(funcName, args, current);
 
     List<Converter>[]? converts = null;
     Function? func = globalFunction.FirstOrDefault(f => f.name.StartsWith(funcName) && (converts = f.CanExecute(args)) is not null);
@@ -608,7 +629,7 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
 
             stringargs = splitArgs(afterEqual);
 
-            RedRust.Type[] args = stringargs.Select(a => Convert(a, variables).type!).ToArray();
+            (RedRust.Type type, LifeTime lifeTime)[] args = stringargs.Select(a => ConvertToArgs(a, variables, current)).ToArray();
 
             List<Converter>[]? converts = null;
             var f = _class.constructs.FirstOrDefault(f => (converts = f.CanExecute(args)) is not null);
@@ -620,14 +641,14 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
         {
             string funcName = afterEqual.Split('(')[0].Split(' ')[0];
 
-            var args = new List<RedRust.Type>();
+            var args = new List<(RedRust.Type type, LifeTime lifeTime)>();
             afterEqual = afterEqual.Substring(funcName.Length + 1, afterEqual.Length - funcName.Length - 3);
             stringargs = splitArgs(afterEqual);
             foreach (var a in stringargs)
             {
-                args.Add(Convert(a, variables).type!);
+                args.Add(ConvertToArgs(a, variables, current));
             }
-            function = GetFunctions(_class, funcName, args.ToArray());
+            function = GetFunctions(_class, funcName, args.ToArray(), current);
         }
 
         if (function.Count == 1)
@@ -639,7 +660,10 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
     }
     else//number
     {
-        var t = Convert(afterEqual.Substring(0, afterEqual.Length - 1), variables);
+        var t = Convert(afterEqual.Substring(0, afterEqual.Length - 1), variables, current);
+
+        if (t.type is null)
+            throw new Exception("variable not found");
 
         var converts = type.Equivalent(t.type);
 
@@ -650,7 +674,7 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
         if (!toDelete && r.last is not null)
             r.last.lifeTime = current;
         lines.Add(new FuncLine($"{preEqual}{r.toPut}"));
-        if (variables.GetName(r.toPut, out var a))
+        if (variables.GetName(r.toPut, current, out var a))
             return a;
     }
     return null;
@@ -781,12 +805,12 @@ foreach (var t in tokens)
     {
         if (f.state == ConverterEnum.Success)
         {
-            last = variables.GetName(r);
+            last = variables.GetName(r, current);
             continue;
         }
         if (f.state == ConverterEnum.ToNull)
         {
-            var type = Convert(r, variables).type!;
+            var type = Convert(r, variables, current).type!;
             last = variables.Add("Converter", s => new(s, type, current));
             lines.Add(new FuncLine($"{f._null!.id} {last.name} = {r}"));
             r = $"&{last.name}";

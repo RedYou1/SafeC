@@ -17,21 +17,21 @@
             Push();
         }
 
-        public Variable? GetName(string name)
-        => Variables.FirstOrDefault(v => v.name.Equals(name));
+        public Variable? GetName(string name, LifeTime current)
+            => GetFunc(v => v.name.Equals(name), current);
 
-        public bool GetName(string name, out Variable? v)
+        public bool GetName(string name, LifeTime current, out Variable? v)
+            => GetFunc(v => v.name.Equals(name), current, out v);
+
+        public Variable? GetFunc(Func<Variable, bool> func, LifeTime current)
         {
-            v = Variables.FirstOrDefault(v => v.name.Equals(name));
-            return v is not null;
+            GetFunc(func, current, out var v);
+            return v;
         }
 
-        public Variable? GetFunc(Func<Variable, bool> func)
-        => Variables.FirstOrDefault(func);
-
-        public bool GetFunc(Func<Variable, bool> func, out Variable? v)
+        public bool GetFunc(Func<Variable, bool> func, LifeTime current, out Variable? v)
         {
-            v = Variables.FirstOrDefault(func);
+            v = Variables.FirstOrDefault(v => current.Ok(v.lifeTime) && func(v));
             return v is not null;
         }
 

@@ -11,5 +11,8 @@
 
         public bool Ok(LifeTime lifeTime)
             => this == lifeTime || (from is not null && from.Ok(lifeTime));
+
+        public int Length()
+            => (from?.Length() ?? 0) + 1;
     }
 }

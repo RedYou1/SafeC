@@ -15,14 +15,14 @@
             this.lines = lines;
         }
 
-        public List<Converter>[]? CanExecute(Type[] types)
+        public List<Converter>[]? CanExecute((Type type, LifeTime lifeTime)[] vars)
         {
-            if (parameters.Length != types.Length)
+            if (parameters.Length != vars.Length)
                 return null;
-            List<Converter>[] functions = new List<Converter>[types.Length];
+            List<Converter>[] functions = new List<Converter>[vars.Length];
             for (int i = 0; i < parameters.Length; i++)
             {
-                var function = parameters[i].type.Equivalent(types[i]);
+                var function = parameters[i].type.Equivalent(vars[i].type);
                 if (function is null)
                     return null;
                 functions[i] = function;

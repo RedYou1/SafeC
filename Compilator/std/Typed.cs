@@ -28,14 +28,14 @@
                 new FuncLine("return this")));
         }
 
-        public override List<ToCallFunc> GetFunctions(string funcName, Type[] args)
+        public override List<ToCallFunc> GetFunctions(string funcName, (Type type, LifeTime lifeTime)[] args, LifeTime current)
         {
-            args[0] = contain;
-            List<ToCallFunc> func = contain.GetFunctions(funcName, args);
+            args[0] = (contain, current);
+            List<ToCallFunc> func = contain.GetFunctions(funcName, args, current);
             foreach (var c in contain.inherit)
             {
-                args[0] = c;
-                func.AddRange(c.GetFunctions(funcName, args));
+                args[0] = (c, current);
+                func.AddRange(c.GetFunctions(funcName, args, current));
             }
             return func;
         }

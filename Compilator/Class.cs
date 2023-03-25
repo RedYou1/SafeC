@@ -34,7 +34,7 @@
             functions = new List<Function>();
         }
 
-        public virtual List<ToCallFunc> GetFunctions(string funcName, Type[] args)
+        public virtual List<ToCallFunc> GetFunctions(string funcName, (Type type, LifeTime lifeTime)[] args, LifeTime current)
         {
             if (functions is not null)
             {
@@ -43,7 +43,7 @@
                 if (func is not null && converts is not null)
                     return new() { new(this, func, converts) };
             }
-            return extend?.GetFunctions(funcName, args) ?? new();
+            return extend?.GetFunctions(funcName, args, current) ?? new();
         }
 
         public IEnumerable<Class> inherits()
