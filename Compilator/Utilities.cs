@@ -135,7 +135,7 @@
                 else if (f._explicit!.Value.toDelete)
                 {
                     if (last is not null)
-                        last.lifeTime = current;
+                        last.VariableAction = new OwnedVariable(last, current);
 
                     last = variables.Add("Converter", s => new(s, f._explicit.Value.converter.returnType, current));
                     lines.Add(new FuncLine(
@@ -159,13 +159,13 @@
                 var t = Convert(argsLine[i], variables, current);
                 var v = ConvertVariable(lines, variables, current, converts[i], t.var);
                 if (v.last is not null && !v.last.type.isReference())
-                    v.last.lifeTime = new(current);
+                    v.last.VariableAction = new DeadVariable();
                 funcLine += $"{v.toPut}, ";
             }
             return funcLine;
         }
 
-        public void callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, VariableManager variables, LifeTime current)
+        public Type callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, VariableManager variables, LifeTime current)
         {
             if (!funcs.Any())
                 throw new Exception("no function to call");
@@ -183,7 +183,7 @@
                     funcLine = funcLine.Substring(0, funcLine.Length - 2);
 
                 lines.Add(new FuncLine($"{prefix}{funcs.First().func.name}({funcLine})"));
-                return;
+                return funcs.First().func.returnType;
             }
             string pre = string.Empty;
 
@@ -219,6 +219,7 @@
                 lines.Add(new FuncLine($"{funcLine})"));
                 lines.Add(new FuncLine2("}"));
             }
+            return funcs.First().func.returnType;
         }
     }
 }

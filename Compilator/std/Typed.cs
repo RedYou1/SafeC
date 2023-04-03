@@ -11,7 +11,10 @@
                       new("type",typeEnum,null)
                     }, null)
         {
-            variables[1].lifeTime = variables[0].lifeTime;
+            if (variables[0].lifeTime is null)
+                variables[1].VariableAction = new DeadVariable();
+            else
+                variables[1].VariableAction = new OwnedVariable(variables[1], variables[0].lifeTime);
 
             contain = of;
             this.typeEnum = typeEnum;

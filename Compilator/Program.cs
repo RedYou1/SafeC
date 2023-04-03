@@ -148,51 +148,69 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             }
         }
 
-        if (variables.GetFunc(v => line.StartsWith(v.name), current, out Variable? variable) && variable is not null)// variable...
+        if (variables.Variables.Any(v => line.StartsWith(v.name)))
         {
-            line = line.Substring(variable.name.Length);
-
-            Class? _class = variable.type.AsClass();
-
-            if (_class is null)
-                throw new Exception($"can't call function on the non class variable {variable.name}");
-
-            if (line.StartsWith("."))// call function
+            if (variables.GetFunc(v => line.StartsWith(v.name), current, out Variable? variable) && variable is not null)// variable...
             {
-                string funcName = line.Substring(1).Split('(')[0].Split(' ')[0];
-                if (line.ElementAt(funcName.Length + 1) == '(')
+                line = line.Substring(variable.name.Length);
+
+                Class? _class = variable.type.AsClass();
+
+                if (_class is null)
+                    throw new Exception($"can't call function on the non class variable {variable.name}");
+
+                if (line.StartsWith("."))// call function
                 {
-                    var args = new List<(RedRust.Type type, LifeTime lifeTime)>() { (variable.type, variable.lifeTime) };
-                    var argsLine = splitArgs(line.Substring(funcName.Length + 2, line.Length - funcName.Length - 3));
-                    foreach (var a in argsLine)
+                    string funcName = line.Substring(1).Split('(')[0].Split(' ')[0];
+                    if (line.ElementAt(funcName.Length + 1) == '(')
                     {
-                        args.Add(ConvertToArgs(a, variables, current));
+                        var args = new List<(RedRust.Type type, LifeTime lifeTime)>() { (variable.type, variable.lifeTime) };
+                        var argsLine = splitArgs(line.Substring(funcName.Length + 2, line.Length - funcName.Length - 3));
+                        foreach (var a in argsLine)
+                        {
+                            args.Add(ConvertToArgs(a, variables, current));
+                        }
+                        var func = Global.GetFunctions(_class, funcName, args.ToArray(), current);
+                        line = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 3);
+
+                        Utilities.callFunctions(string.Empty, _class, lines, func, argsLine, variable.name, variables, current);
                     }
-                    var func = Global.GetFunctions(_class, funcName, args.ToArray(), current);
-                    line = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 3);
+                    else if (_class.allVariables.Any(v => v.name.Equals(funcName)))
+                    {
+                        // = 
+                        var v = Utilities.Convert($"{variable.name}.{funcName}", variables, current);
+                        Variable r = _class.allVariables.First(v => v.name.Equals(funcName));
+                        if (!constructor && v.type is not null && v.type.CanDeconstruct)
+                            r.DeleteVar(current, lines, line);
 
-                    Utilities.callFunctions(string.Empty, _class, lines, func, argsLine, variable.name, variables, current);
-                }
-                else if (_class.allVariables.Any(v => v.name.Equals(funcName)))
-                {
-                    // = 
-                    var v = Utilities.Convert($"{variable.name}.{funcName}", variables, current);
-                    Variable r = _class.allVariables.First(v => v.name.Equals(funcName));
-                    if (!constructor && v.type is not null && v.type.CanDeconstruct)
-                        r.DeleteVar(current, lines, line);
-
-                    string[] e = line.Split(" = ");
-                    var l = AssignVariable(variables, current, false, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, constructor);
-                    if (l is not null)
-                        l.lifeTime = r.lifeTime;
+                        string[] e = line.Split(" = ");
+                        var l = AssignVariable(variables, current, false, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, constructor);
+                        if (l is not null)
+                            if (r.lifeTime is null)
+                                l.VariableAction = new DeadVariable();
+                            else
+                                l.VariableAction = new OwnedVariable(l, r.lifeTime);
+                    }
+                    else
+                        throw new Exception($"cant find value {funcName} in object of type {_class.name} named {variable.name}");
                 }
                 else
-                    throw new Exception($"cant find value {funcName} in object of type {_class.name} named {variable.name}");
+                {
+                    //reasign
+                    variable.DeleteVar(current, lines, line);
+                    var v = AssignVariable(variables, current, true, lines, $"{variable.name} = ", line.Substring(3), variable.type, constructor);
+                    if (v is not null && v.lifeTime is not null)
+                        variable.VariableAction = new OwnedVariable(variable, v.lifeTime);
+                }
             }
-            else//reassign
+            else
             {
+                variable = variables.Variables.First(v => line.StartsWith(v.name));
+                //reasign
                 variable.DeleteVar(current, lines, line);
-                AssignVariable(variables, current, true, lines, $"{variable.name} = ", line.Substring(3), variable.type, constructor);
+                var v = AssignVariable(variables, current, true, lines, $"{variable.name} = ", line.Substring(3), variable.type, constructor);
+                if (v is not null && v.lifeTime is not null)
+                    variable.VariableAction = new OwnedVariable(variable, v.lifeTime);
             }
         }
         else if (line.StartsWith("return "))
@@ -353,7 +371,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
 (RedRust.Type type, LifeTime lifeTime) ConvertToArgs(string var, VariableManager variables, LifeTime current)
 {
     var v = Utilities.Convert(var, variables, current);
-    if (!current.Ok(v.lifeTime))
+    if (v.lifeTime is null || !current.Ok(v.lifeTime))
         throw new Exception("You dont have the ownership");
     return (v.type, v.lifeTime);
 }
@@ -396,7 +414,7 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
 
         if (function.Count == 1)
         {
-            Utilities.callFunctions(preEqual, _class, lines, function, stringargs, string.Empty, variables, current);
+            return new Variable(string.Empty, Utilities.callFunctions(preEqual, _class, lines, function, stringargs, string.Empty, variables, current), current);
         }
         else
             throw new Exception("not implemented");
@@ -415,7 +433,7 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
 
         var r = Utilities.ConvertVariable(lines, variables, current, converts, t.var);
         if (!toDelete && r.last is not null)
-            r.last.lifeTime = current;
+            r.last.VariableAction = new OwnedVariable(r.last, current);
         lines.Add(new FuncLine($"{preEqual}{r.toPut}"));
         if (variables.GetName(r.toPut, current, out var a))
             return a;

@@ -31,7 +31,7 @@
 
         public bool GetFunc(Func<Variable, bool> func, LifeTime current, out Variable? v)
         {
-            v = Variables.FirstOrDefault(v => current.Ok(v.lifeTime) && func(v));
+            v = Variables.FirstOrDefault(v => v.VariableAction is OwnedVariable o && current.Ok(o.lifeTime) && func(v));
             return v is not null;
         }
 
