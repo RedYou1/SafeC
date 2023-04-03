@@ -86,7 +86,7 @@
 
             (Function converter, bool toDelete) a =
                 (new Function($"{_other.name}_to_{_class.name}", _class,
-                new Variable[] { new("this", _other, new()) },
+                new Variable[] { new("this", _other, new()) }, new(),
                     new FuncLine($"{_class.id} t = ({_class.id})malloc(sizeof({_class.name}))"),
                     new FuncLine("t->ptr = this"),
                     new FuncLine($"t->type = {_class.typeEnum.id}${_other.name}"),

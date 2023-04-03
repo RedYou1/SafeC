@@ -1,4 +1,6 @@
-﻿namespace RedRust
+﻿using System;
+
+namespace RedRust
 {
     internal class Utilities
     {
@@ -113,7 +115,7 @@
             return (type, lifeTime, r);
         }
 
-        public (string toPut, Variable? last) ConvertVariable(List<Token> lines, VariableManager variables, LifeTime current, List<Converter> convert, string r)
+        public (string toPut, Variable? last) ConvertVariable(List<Token> lines, VariableManager variables, List<Includable> includes, LifeTime current, List<Converter> convert, string r)
         {
             Variable? last = null;
             foreach (Converter f in convert.ToArray().Reverse())
@@ -137,6 +139,9 @@
                     if (last is not null)
                         last.VariableAction = new OwnedVariable(last, current);
 
+                    if (!includes.Contains(f._explicit.Value.converter))
+                        includes.Add(f._explicit.Value.converter);
+
                     last = variables.Add("Converter", s => new(s, f._explicit.Value.converter.returnType, current));
                     lines.Add(new FuncLine(
                         $"{f._explicit.Value.converter.returnType.id} {last.name} = {f._explicit.Value.converter.name}({r})"));
@@ -149,7 +154,7 @@
             return (r, last);
         }
 
-        private string PutArgs(List<Converter>[] converts, string[] argsLine, List<Token> lines, VariableManager variables, LifeTime current)
+        private string PutArgs(List<Converter>[] converts, string[] argsLine, List<Token> lines, VariableManager variables, List<Includable> includes, LifeTime current)
         {
             if (converts.Length < argsLine.Length)
                 throw new Exception("Size");
@@ -157,7 +162,7 @@
             for (int i = 0; i < argsLine.Length; i++)
             {
                 var t = Convert(argsLine[i], variables, current);
-                var v = ConvertVariable(lines, variables, current, converts[i], t.var);
+                var v = ConvertVariable(lines, variables, includes, current, converts[i], t.var);
                 if (v.last is not null && !v.last.type.isReference())
                     v.last.VariableAction = new DeadVariable();
                 funcLine += $"{v.toPut}, ";
@@ -165,19 +170,22 @@
             return funcLine;
         }
 
-        public Type callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, VariableManager variables, LifeTime current)
+        public Type callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, VariableManager variables, List<Includable> includes, LifeTime current)
         {
             if (!funcs.Any())
                 throw new Exception("no function to call");
 
             if (_class is null || _class is not Typed typed)
             {
+                if (!includes.Contains(funcs.First().func))
+                    includes.Add(funcs.First().func);
+
                 string funcLine = string.Empty;
 
                 if (!string.IsNullOrEmpty(variableName))
                     funcLine += $"{variableName}, ";
 
-                funcLine += PutArgs(funcs.First().converts, argsLine, lines, variables, current);
+                funcLine += PutArgs(funcs.First().converts, argsLine, lines, variables, includes, current);
 
                 if (funcLine.Length >= 2)
                     funcLine = funcLine.Substring(0, funcLine.Length - 2);
@@ -192,11 +200,14 @@
                 if (func.of is null)
                     continue;
 
+                if (!includes.Contains(func.func))
+                    includes.Add(func.func);
+
                 lines.Add(new FuncLine2($"{pre}if ({variableName}->type == Extend${typed.contain.name}${func.of.name}) {{"));
 
                 string funcLine = $"\t{prefix}{func.func.name}({variableName}->ptr, ";
 
-                funcLine += PutArgs(func.converts.Skip(1).ToArray(), argsLine, lines, variables, current);
+                funcLine += PutArgs(func.converts.Skip(1).ToArray(), argsLine, lines, variables, includes, current);
 
                 funcLine = funcLine.Substring(0, funcLine.Length - 2);
 
@@ -208,11 +219,14 @@
             ToCallFunc? f = funcs.FirstOrDefault(f => _class is not Typed typed || f.of is null);
             if (f is not null)
             {
+                if (!includes.Contains(f.func))
+                    includes.Add(f.func);
+
                 lines.Add(new FuncLine2("else {"));
 
                 string funcLine = $"\t{prefix}{f.func.name}({variableName}->ptr, ";
 
-                funcLine += PutArgs(f.converts.Skip(1).ToArray(), argsLine, lines, variables, current);
+                funcLine += PutArgs(f.converts.Skip(1).ToArray(), argsLine, lines, variables, includes, current);
 
                 funcLine = funcLine.Substring(0, funcLine.Length - 2);
 

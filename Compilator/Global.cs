@@ -70,7 +70,7 @@
             types.Add("f32", f32);
             types.Add("f64", f64);
 
-            _string = new String(_char, u64);
+            _string = new String(this, _char, u64);
             _str = new Reference(new("const char"));
 
             _string.implicitCast.Add((_str, (string arg) => $"{arg}->ptr"));
@@ -79,7 +79,7 @@
                 new Variable[]
                 {
                     new ("this",_str,new ())
-                },
+                }, new(),
                new FuncLine($"{_string.id} newthis = ({_string.id})malloc(sizeof({_string.name}))"),
                new FuncLine($"newthis->len = strlen(this)"),
                new FuncLine($"newthis->ptr = ({_char.id}*)malloc(newthis->len + 1)"),

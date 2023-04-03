@@ -18,7 +18,7 @@
                 new($"{name}_Construct", this,
                 new Variable[] {
                 new( "len",size,new())
-                },
+                }, new(),
                 new FuncLine($"{id} this = ({id})malloc(sizeof({name}))"),
                 new FuncLine($"this->ptr = ({of.id}*)malloc(sizeof({of.id}) * len)"),
                 new FuncLine("this->len = len"),

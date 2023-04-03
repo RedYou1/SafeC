@@ -1,7 +1,10 @@
 ﻿namespace RedRust
 {
-    internal class Class : Pointer, Token
+    internal class Class : Pointer, Incluer
     {
+        public List<Includable> includes { get; }
+        public bool included { get; set; } = false;
+
         public readonly string name;
         public readonly Variable[] variables;
         public readonly Variable[] allVariables;
@@ -32,6 +35,9 @@
             this.extend = extend;
             constructs = new List<Function>();
             functions = new List<Function>();
+
+            includes = allVariables.Select(v => v.type is Includable i ? i : null)
+                .Where(v => v is not null).Cast<Includable>().ToList();
         }
 
         public virtual List<ToCallFunc> GetFunctions(string funcName, (Type type, LifeTime lifeTime)[] args, LifeTime current)
@@ -57,15 +63,17 @@
 
         public virtual void Compile(string tabs, StreamWriter sw)
         {
+            if (included)
+                return;
+            included = true;
+
+            foreach (var include in includes)
+                include.Compile(tabs, sw);
+
             sw.WriteLine($$"""{{tabs}}typedef struct {{name}} {""");
             foreach (var v in allVariables)
                 sw.WriteLine($"{tabs}\t{v.type.id} {v.name};");
             sw.WriteLine($$"""{{tabs}}}{{name}};""");
-
-            foreach (var v in constructs)
-            {
-                v.Compile(tabs, sw);
-            }
 
             sw.WriteLine($"{tabs}void {name}_DeConstruct({id} this) {{");
             foreach (Variable line in variables)
@@ -80,17 +88,9 @@
             sw.WriteLine($"{tabs}\tfree(this);");
             sw.WriteLine($"{tabs}}}");
 
-            foreach (var v in functions)
-            {
-                v.Compile(tabs, sw);
-            }
             if (typed is not null)
             {
                 typed.Compile(tabs, sw);
-            }
-            foreach (var v in explicitCast)
-            {
-                v.converter.Compile(tabs, sw);
             }
         }
 

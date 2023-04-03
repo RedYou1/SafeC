@@ -24,7 +24,7 @@
                 new Variable[] {
                 new( "ptr",new Reference(of),cc),
                 new("type",typeEnum,cc)
-                },
+                }, new(),
                 new FuncLine($"{id} this = ({id})malloc(sizeof({name}))"),
                 new FuncLine("this->ptr = ptr"),
                 new FuncLine("this->type = type"),
@@ -45,6 +45,8 @@
 
         public override void Compile(string tabs, StreamWriter sw)
         {
+            if (included)
+                return;
             typeEnum.Compile(tabs, sw);
             base.Compile(tabs, sw);
         }

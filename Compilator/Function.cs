@@ -1,18 +1,28 @@
 ﻿namespace RedRust
 {
-    internal class Function : Token
+    internal class Function : Incluer
     {
+        public List<Includable> includes { get; } = new();
+        public bool included { get; set; } = false;
+
+
         public readonly Type returnType;
         public readonly string name;
         public readonly Variable[] parameters;
         public readonly Token[] lines;
 
-        public Function(string name, Type returnType, Variable[] parameters, params Token[] lines)
+        public Function(string name, Type returnType, Variable[] parameters, List<Includable> includes, params Token[] lines)
         {
             this.name = name;
             this.returnType = returnType;
             this.parameters = parameters;
             this.lines = lines;
+
+            this.includes = includes;
+            this.includes.AddRange(parameters.Select(v => v.type is Includable i ? i : null)
+                .Where(v => v is not null).Cast<Includable>());
+            if (returnType is Includable i)
+                this.includes.Add(i);
         }
 
         public List<Converter>[]? CanExecute((Type type, LifeTime lifeTime)[] vars)
@@ -32,6 +42,13 @@
 
         public void Compile(string tabs, StreamWriter sw)
         {
+            if (included)
+                return;
+            included = true;
+
+            foreach (var include in includes)
+                include.Compile(tabs, sw);
+
             sw.Write($"{tabs}{returnType.id} {name}(");
             if (parameters.Any())
             {
