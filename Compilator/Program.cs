@@ -157,7 +157,13 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
 
                 string varName = firstSplit.Last();
 
-                AssignVariable(variables, current, true, lines, $"{type.id} {varName} = ", equal[1], type, includes, constructor);
+                var v = AssignVariable(variables, current, true, lines, $"{type.id} {varName} = ", equal[1], type, includes, constructor);
+                if (v is not null)
+                {
+                    AddTypeToInclude(includes, v.type);
+                    v.VariableAction = new DeadVariable();
+                }
+
                 variables.Add(varName, s => new(s, type, current));
                 moveOk = enumarator.MoveNext();
                 continue;
@@ -189,7 +195,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                         var func = Global.GetFunctions(_class, funcName, args.ToArray(), current);
                         line = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 3);
 
-                        Utilities.callFunctions(string.Empty, _class, lines, func, argsLine, variable.name, variables, includes, current);
+                        Utilities.callFunctions(func.First().func, string.Empty, _class, lines, func, argsLine, variable.name, variables, includes, current);
                     }
                     else if (_class.allVariables.Any(v => v.name.Equals(funcName)))
                     {
@@ -215,8 +221,12 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                     //reasign
                     variable.DeleteVar(current, lines, line);
                     var v = AssignVariable(variables, current, true, lines, $"{variable.name} = ", line.Substring(3), variable.type, includes, constructor);
-                    if (v is not null && v.lifeTime is not null)
-                        variable.VariableAction = new OwnedVariable(variable, v.lifeTime);
+                    if (v is not null && v != variable)
+                    {
+                        if (v.lifeTime is not null)
+                            variable.VariableAction = new OwnedVariable(variable, v.lifeTime);
+                        v.VariableAction = new DeadVariable();
+                    }
                 }
             }
             else
@@ -225,8 +235,12 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                 //reasign
                 variable.DeleteVar(current, lines, line);
                 var v = AssignVariable(variables, current, true, lines, $"{variable.name} = ", line.Substring(3), variable.type, includes, constructor);
-                if (v is not null && v.lifeTime is not null)
-                    variable.VariableAction = new OwnedVariable(variable, v.lifeTime);
+                if (v is not null && v != variable)
+                {
+                    if (v.lifeTime is not null)
+                        variable.VariableAction = new OwnedVariable(variable, v.lifeTime);
+                    v.VariableAction = new DeadVariable();
+                }
             }
         }
         else if (line.StartsWith("return "))
@@ -372,7 +386,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             List<Converter>[]? converts = null;
             Function? func = Global.globalFunction.FirstOrDefault(f => f.name.StartsWith(funcName) && (converts = f.CanExecute(args.ToArray())) is not null);
             if (func is not null && converts is not null)
-                Utilities.callFunctions(string.Empty, null, lines, new() { new(null, func, converts) }, stringargs, string.Empty, variables, includes, current);
+                Utilities.callFunctions(func, string.Empty, null, lines, new() { new(null, func, converts) }, stringargs, string.Empty, variables, includes, current);
             else
                 throw new Exception("not implemented");
         }
@@ -400,12 +414,17 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
 {
     if (afterEqual.EndsWith(")"))
     {
-        Class _class = type.AsClass();
+        Class? _class;
         List<ToCallFunc> function = new();
         string[] stringargs;
+        string variableName = string.Empty;
 
         if (afterEqual.StartsWith("new "))
         {
+            _class = type.AsClass();
+            if (_class is null)
+                throw new Exception("class is null");
+
             afterEqual = afterEqual.Substring(_class.name.Length + 5, afterEqual.Length - _class.name.Length - 6);
 
             stringargs = splitArgs(afterEqual);
@@ -418,8 +437,38 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
                 throw new Exception($"constructor not found in class {_class.name}");
             function = new() { new(_class, f, converts) };
         }
+        else if (afterEqual.Split("(")[0].Contains("."))
+        {
+            string prePara = afterEqual.Split("(")[0];
+            string[] ob = prePara.Split(".");
+            variableName = ob[0];
+            var variable = variables.GetName(ob[0], current);
+
+            if (variable is null)
+                throw new Exception("variable is null");
+
+            string funcName = ob[1];
+
+            var args = new List<(RedRust.Type type, LifeTime lifeTime)>() { (variable.type, variable.lifeTime) };
+            afterEqual = afterEqual.Substring(prePara.Length + 1, afterEqual.Length - prePara.Length - 2);
+            stringargs = splitArgs(afterEqual);
+            foreach (var a in stringargs)
+            {
+                args.Add(ConvertToArgs(a, variables, current));
+            }
+
+            _class = variable.type.AsClass();
+            if (_class is null)
+                throw new Exception("class is null");
+
+            function = Global.GetFunctions(_class, funcName, args.ToArray(), current);
+        }
         else
         {
+            _class = type.AsClass();
+            if (_class is null)
+                throw new Exception("class is null");
+
             string funcName = afterEqual.Split('(')[0].Split(' ')[0];
 
             var args = new List<(RedRust.Type type, LifeTime lifeTime)>();
@@ -429,6 +478,7 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
             {
                 args.Add(ConvertToArgs(a, variables, current));
             }
+
             function = Global.GetFunctions(_class, funcName, args.ToArray(), current);
         }
 
@@ -438,7 +488,7 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
 
         if (function.Count == 1)
         {
-            return new Variable(string.Empty, Utilities.callFunctions(preEqual, _class, lines, function, stringargs, string.Empty, variables, includes, current), current);
+            return new Variable(string.Empty, Utilities.callFunctions(function.First().func, preEqual, _class, lines, function, stringargs, variableName, variables, includes, current), current);
         }
         else
             throw new Exception("not implemented");

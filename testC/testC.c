@@ -138,6 +138,9 @@ B* createB() {
 	B* b = B_Construct();
 	return b;
 }
+bool Array$char_StartsWith(Array$char* this, Array$char* o) {
+	return o->len > this->len ? false : memcmp(this->ptr, o->ptr, o->len) == 0;
+}
 int main() {
 	A* aa = A_Construct();
 	printf("%i", aa->a);
@@ -174,9 +177,18 @@ int main() {
 	}
 	b = createB();
 	B_Print(b);
+	Array$char* Converter5 = str_toString(a->id);
+	Array$char* start1 = Converter5;
+	Array$char* Converter6 = str_toString("ID2");
+	Array$char* start2 = Converter6;
+	bool start = Array$char_StartsWith(start1, start2);
+	printf("%i", start);
+	printf("\n");
 	C_DeConstruct(a);
 	if (b != NULL) {
 		B_DeConstruct(b);
 	}
+	Array$char_DeConstruct(start1);
+	Array$char_DeConstruct(start2);
 	return 0;
 }

@@ -61,7 +61,7 @@
             types.Add("i32", i32);
             types.Add("i64", i64);
 
-            types.Add("bool", u8);
+            types.Add("bool", u1);
             types.Add("u8", u8);
             types.Add("u16", u16);
             types.Add("u32", u32);
@@ -137,7 +137,7 @@
             return type;
         }
 
-        public List<ToCallFunc> GetFunctions(Class _class, string funcName, (RedRust.Type type, LifeTime lifeTime)[] args, LifeTime current)
+        public List<ToCallFunc> GetFunctions(Class _class, string funcName, (Type type, LifeTime lifeTime)[] args, LifeTime current)
         {
             List<ToCallFunc> r = _class.GetFunctions(funcName, args, current);
 

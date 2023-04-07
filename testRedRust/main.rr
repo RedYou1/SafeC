@@ -90,4 +90,13 @@ fn i32 main():
 	b.Print()
 	b = createB()
 	b.Print()
+
+
+	string start1 = a.id
+	string start2 = "ID2"
+	bool start = start1.StartsWith(start2)
+
+	print(start)
+	print("\n")
+
 	return 0

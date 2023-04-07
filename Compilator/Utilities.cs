@@ -1,6 +1,4 @@
-﻿using System;
-
-namespace RedRust
+﻿namespace RedRust
 {
     internal class Utilities
     {
@@ -128,6 +126,8 @@ namespace RedRust
                 if (f.state == ConverterEnum.ToNull)
                 {
                     var type = Convert(r, variables, current).type!;
+                    if (last is not null)
+                        last.VariableAction = new DeadVariable();
                     last = variables.Add("Converter", s => new(s, type, current));
                     lines.Add(new FuncLine($"{f._null!.id} {last.name} = {r}"));
                     r = $"&{last.name}";
@@ -154,7 +154,7 @@ namespace RedRust
             return (r, last);
         }
 
-        private string PutArgs(List<Converter>[] converts, string[] argsLine, List<Token> lines, VariableManager variables, List<Includable> includes, LifeTime current)
+        private string PutArgs(Function func, List<Converter>[] converts, string[] argsLine, List<Token> lines, VariableManager variables, List<Includable> includes, LifeTime current)
         {
             if (converts.Length < argsLine.Length)
                 throw new Exception("Size");
@@ -163,14 +163,14 @@ namespace RedRust
             {
                 var t = Convert(argsLine[i], variables, current);
                 var v = ConvertVariable(lines, variables, includes, current, converts[i], t.var);
-                if (v.last is not null && !v.last.type.isReference())
+                if (v.last is not null && !func.parameters[i].type.isReference())
                     v.last.VariableAction = new DeadVariable();
                 funcLine += $"{v.toPut}, ";
             }
             return funcLine;
         }
 
-        public Type callFunctions(string prefix, Class? _class, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, VariableManager variables, List<Includable> includes, LifeTime current)
+        public Type callFunctions(Function func, string prefix, Class? _class, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, VariableManager variables, List<Includable> includes, LifeTime current)
         {
             if (!funcs.Any())
                 throw new Exception("no function to call");
@@ -185,7 +185,7 @@ namespace RedRust
                 if (!string.IsNullOrEmpty(variableName))
                     funcLine += $"{variableName}, ";
 
-                funcLine += PutArgs(funcs.First().converts, argsLine, lines, variables, includes, current);
+                funcLine += PutArgs(func, funcs.First().converts, argsLine, lines, variables, includes, current);
 
                 if (funcLine.Length >= 2)
                     funcLine = funcLine.Substring(0, funcLine.Length - 2);
@@ -195,19 +195,19 @@ namespace RedRust
             }
             string pre = string.Empty;
 
-            foreach (ToCallFunc func in funcs)
+            foreach (ToCallFunc param in funcs)
             {
-                if (func.of is null)
+                if (param.of is null)
                     continue;
 
-                if (!includes.Contains(func.func))
-                    includes.Add(func.func);
+                if (!includes.Contains(param.func))
+                    includes.Add(param.func);
 
-                lines.Add(new FuncLine2($"{pre}if ({variableName}->type == Extend${typed.contain.name}${func.of.name}) {{"));
+                lines.Add(new FuncLine2($"{pre}if ({variableName}->type == Extend${typed.contain.name}${param.of.name}) {{"));
 
-                string funcLine = $"\t{prefix}{func.func.name}({variableName}->ptr, ";
+                string funcLine = $"\t{prefix}{param.func.name}({variableName}->ptr, ";
 
-                funcLine += PutArgs(func.converts.Skip(1).ToArray(), argsLine, lines, variables, includes, current);
+                funcLine += PutArgs(func, param.converts.Skip(1).ToArray(), argsLine, lines, variables, includes, current);
 
                 funcLine = funcLine.Substring(0, funcLine.Length - 2);
 
@@ -226,7 +226,7 @@ namespace RedRust
 
                 string funcLine = $"\t{prefix}{f.func.name}({variableName}->ptr, ";
 
-                funcLine += PutArgs(f.converts.Skip(1).ToArray(), argsLine, lines, variables, includes, current);
+                funcLine += PutArgs(func, f.converts.Skip(1).ToArray(), argsLine, lines, variables, includes, current);
 
                 funcLine = funcLine.Substring(0, funcLine.Length - 2);
 
