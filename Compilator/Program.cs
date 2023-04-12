@@ -192,10 +192,10 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                         {
                             args.Add(ConvertToArgs(a, variables, current));
                         }
-                        var func = Global.GetFunctions(_class, funcName, args.ToArray(), current);
+                        var func = _class.GetFunctions(funcName, args.ToArray(), current);
                         line = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 3);
 
-                        Utilities.callFunctions(func.First().func, string.Empty, _class, lines, func, argsLine, variable.name, variables, includes, current);
+                        Utilities.callFunctions(_class, string.Empty, lines, func, argsLine, variable.name, variables, includes, current);
                     }
                     else if (_class.allVariables.Any(v => v.name.Equals(funcName)))
                     {
@@ -356,21 +356,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             if (function is null || converts is null)
                 throw new Exception($"base constructor not found in class {_class.name} for {v.type.id}");
 
-            //TODO Utilities.callFunctions
-            if (!includes.Contains(function))
-                includes.Add(function);
-
-            string funcLine = $"{function.name}(this";
-
-            if (stringargs.Length + 1 != converts.Length)
-                throw new Exception("not right amount of args");
-            for (int i = 1; i < converts.Length; i++)
-            {
-                string r = Utilities.Convert(stringargs[i - 1], variables, current).var;
-                r = Utilities.ConvertVariable(lines, variables, includes, current, converts[i], r).toPut;
-                funcLine += $", {r}";
-            }
-            lines.Add(new FuncLine($"{funcLine})"));
+            Utilities.callFunctions(_class, string.Empty, lines, new() { new(_class, function, converts) }, stringargs, "this", variables, includes, current);
         }
         else if (line.Contains("("))
         {
@@ -383,12 +369,8 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             {
                 args.Add(ConvertToArgs(a, variables, current));
             }
-            List<Converter>[]? converts = null;
-            Function? func = Global.globalFunction.FirstOrDefault(f => f.name.StartsWith(funcName) && (converts = f.CanExecute(args.ToArray())) is not null);
-            if (func is not null && converts is not null)
-                Utilities.callFunctions(func, string.Empty, null, lines, new() { new(null, func, converts) }, stringargs, string.Empty, variables, includes, current);
-            else
-                throw new Exception("not implemented");
+            var func = Global.GetFunctions(funcName, args.ToArray(), current);
+            Utilities.callFunctions(null, string.Empty, lines, new() { func }, stringargs, string.Empty, variables, includes, current);
         }
         else
             throw new Exception($"func line couldnt be interpreted:{line}");
@@ -414,7 +396,7 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
 {
     if (afterEqual.EndsWith(")"))
     {
-        Class? _class;
+        Class? _class = null;
         List<ToCallFunc> function = new();
         string[] stringargs;
         string variableName = string.Empty;
@@ -461,14 +443,10 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
             if (_class is null)
                 throw new Exception("class is null");
 
-            function = Global.GetFunctions(_class, funcName, args.ToArray(), current);
+            function = _class.GetFunctions(funcName, args.ToArray(), current);
         }
         else
         {
-            _class = type.AsClass();
-            if (_class is null)
-                throw new Exception("class is null");
-
             string funcName = afterEqual.Split('(')[0].Split(' ')[0];
 
             var args = new List<(RedRust.Type type, LifeTime lifeTime)>();
@@ -479,7 +457,7 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
                 args.Add(ConvertToArgs(a, variables, current));
             }
 
-            function = Global.GetFunctions(_class, funcName, args.ToArray(), current);
+            function = new() { Global.GetFunctions(funcName, args.ToArray(), current) };
         }
 
         foreach (var f in function)
@@ -488,7 +466,7 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
 
         if (function.Count == 1)
         {
-            return new Variable(string.Empty, Utilities.callFunctions(function.First().func, preEqual, _class, lines, function, stringargs, variableName, variables, includes, current), current);
+            return new Variable(string.Empty, Utilities.callFunctions(_class, preEqual, lines, function, stringargs, variableName, variables, includes, current), current);
         }
         else
             throw new Exception("not implemented");

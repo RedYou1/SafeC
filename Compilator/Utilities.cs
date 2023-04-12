@@ -170,29 +170,30 @@
             return funcLine;
         }
 
-        public Type callFunctions(Function func, string prefix, Class? _class, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, VariableManager variables, List<Includable> includes, LifeTime current)
+        private Type callFunction(string prefix, List<Token> lines, ToCallFunc func, string[] argsLine, string variableName, VariableManager variables, List<Includable> includes, LifeTime current)
         {
-            if (!funcs.Any())
-                throw new Exception("no function to call");
+            if (!includes.Contains(func.func))
+                includes.Add(func.func);
 
-            if (_class is null || _class is not Typed typed)
-            {
-                if (!includes.Contains(funcs.First().func))
-                    includes.Add(funcs.First().func);
+            string funcLine = string.Empty;
 
-                string funcLine = string.Empty;
+            if (!string.IsNullOrEmpty(variableName))
+                funcLine += $"{variableName}, ";
 
-                if (!string.IsNullOrEmpty(variableName))
-                    funcLine += $"{variableName}, ";
+            funcLine += PutArgs(func.func, func.converts, argsLine, lines, variables, includes, current);
 
-                funcLine += PutArgs(func, funcs.First().converts, argsLine, lines, variables, includes, current);
+            if (funcLine.Length >= 2)
+                funcLine = funcLine.Substring(0, funcLine.Length - 2);
 
-                if (funcLine.Length >= 2)
-                    funcLine = funcLine.Substring(0, funcLine.Length - 2);
+            lines.Add(new FuncLine($"{prefix}{func.func.name}({funcLine})"));
+            return func.func.returnType;
+        }
 
-                lines.Add(new FuncLine($"{prefix}{funcs.First().func.name}({funcLine})"));
-                return funcs.First().func.returnType;
-            }
+        public Type callFunctions(Class? of, string prefix, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, VariableManager variables, List<Includable> includes, LifeTime current)
+        {
+            if (of is null || of is not Typed typed)
+                return callFunction(prefix, lines, funcs.First(), argsLine, variableName, variables, includes, current);
+
             string pre = string.Empty;
 
             foreach (ToCallFunc param in funcs)
@@ -205,18 +206,13 @@
 
                 lines.Add(new FuncLine2($"{pre}if ({variableName}->type == Extend${typed.contain.name}${param.of.name}) {{"));
 
-                string funcLine = $"\t{prefix}{param.func.name}({variableName}->ptr, ";
+                callFunction(prefix + '\t', lines, param, argsLine, $"{variableName}->ptr", variables, includes, current);
 
-                funcLine += PutArgs(func, param.converts.Skip(1).ToArray(), argsLine, lines, variables, includes, current);
-
-                funcLine = funcLine.Substring(0, funcLine.Length - 2);
-
-                lines.Add(new FuncLine($"{funcLine})"));
                 lines.Add(new FuncLine2("}"));
                 pre = "else ";
             }
 
-            ToCallFunc? f = funcs.FirstOrDefault(f => _class is not Typed typed || f.of is null);
+            ToCallFunc? f = funcs.FirstOrDefault(f => of is not Typed typed || f.of is null);
             if (f is not null)
             {
                 if (!includes.Contains(f.func))
@@ -224,13 +220,8 @@
 
                 lines.Add(new FuncLine2("else {"));
 
-                string funcLine = $"\t{prefix}{f.func.name}({variableName}->ptr, ";
+                callFunction(prefix + '\t', lines, f, argsLine, $"{variableName}->ptr", variables, includes, current);
 
-                funcLine += PutArgs(func, f.converts.Skip(1).ToArray(), argsLine, lines, variables, includes, current);
-
-                funcLine = funcLine.Substring(0, funcLine.Length - 2);
-
-                lines.Add(new FuncLine($"{funcLine})"));
                 lines.Add(new FuncLine2("}"));
             }
             return funcs.First().func.returnType;

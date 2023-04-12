@@ -137,15 +137,13 @@
             return type;
         }
 
-        public List<ToCallFunc> GetFunctions(Class _class, string funcName, (Type type, LifeTime lifeTime)[] args, LifeTime current)
+        public ToCallFunc GetFunctions(string funcName, (Type type, LifeTime lifeTime)[] args, LifeTime current)
         {
-            List<ToCallFunc> r = _class.GetFunctions(funcName, args, current);
-
             List<Converter>[]? converts = null;
             Function? func = globalFunction.FirstOrDefault(f => f.name.StartsWith(funcName) && (converts = f.CanExecute(args)) is not null);
             if (func is not null && converts is not null)
-                r.Add(new(null, func, converts));
-            return r;
+                return new(null, func, converts);
+            throw new Exception("Function not found");
         }
     }
 }

@@ -49,7 +49,7 @@
                 if (func is not null && converts is not null)
                     return new() { new(this, func, converts) };
             }
-            return extend?.GetFunctions(funcName, args, current) ?? new();
+            return extend?.GetFunctions(funcName, args, current) ?? throw new Exception("Function not found");
         }
 
         public IEnumerable<Class> inherits()
