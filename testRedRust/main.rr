@@ -59,6 +59,8 @@ fn void Add(&typedyn A a):
 		B b = c.b
 		b.Print()
 		print("add is type C\n")
+	if a is not C:
+		print("add is not type C\n")
 
 fn void TakeOwner(A a):
 	print(a.a)

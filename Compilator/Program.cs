@@ -243,6 +243,24 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                 }
             }
         }
+        else if (line.Equals("return"))
+        {
+            foreach (Variable vs in variables.Variables)
+                vs.DeleteVar(current, lines, line);
+
+            lines.Add(new FuncLine("return"));
+
+            while (enumarator.MoveNext())
+            {
+                if (enumarator.Current is null)
+                    return true;
+                if (string.IsNullOrWhiteSpace(enumarator.Current))
+                    continue;
+                if (!enumarator.Current.StartsWith($"{tabs}\t"))
+                    return true;
+            }
+            return true;
+        }
         else if (line.StartsWith("return "))
         {
             line = line.Substring(7);

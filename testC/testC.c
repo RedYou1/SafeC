@@ -77,6 +77,9 @@ void Add(Typed$A* a) {
 		B_Print(b);
 		printf("add is type C\n");
 	}
+	if (a->type != Extend$A$C) {
+		printf("add is not type C\n");
+	}
 	Typed$A_DeConstruct(a);
 }
 Typed$A* A_to_Typed$A(A* this) {

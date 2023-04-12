@@ -48,7 +48,7 @@
                     throw new Exception("cant access variable");
                 args = args[1].Split(" ");
 
-                if (args.Length == 0 || args.Length > 2)
+                if (args.Length == 0 || args.Length > 3)
                     throw new Exception("{var} is type (name) or {var} is (not) null");
 
 
@@ -66,11 +66,20 @@
                 {
                     if (variable.type is not Typed typed)
                         throw new Exception("variable is not Typed");
+
+                    bool isnot = args[0].Equals("not");
+                    if (isnot)
+                        args = args.Skip(1).ToArray();
+
                     Class? cast = Global.GetType(args[0])?.AsClass();
                     if (cast is null)
                         throw new Exception("Casting type not found");
-                    return (new TypeCondition(Global.u1, variable.name, typed, cast, args.Length == 2 ? args[1] : null),
-                        current, $"{variable.name}->type == Extend${typed.contain.name}${cast.name}");
+                    if (isnot)
+                        return (new NotTypeCondition(Global.u1, variable.name, typed, cast, args.Length == 2 ? args[1] : null),
+                            current, $"{variable.name}->type != Extend${typed.contain.name}${cast.name}");
+                    else
+                        return (new TypeCondition(Global.u1, variable.name, typed, cast, args.Length == 2 ? args[1] : null),
+                            current, $"{variable.name}->type == Extend${typed.contain.name}${cast.name}");
                 }
             }
 
