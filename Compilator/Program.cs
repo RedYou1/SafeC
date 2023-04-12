@@ -269,19 +269,17 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
         }
         else if (line.StartsWith("if"))
         {
-            //TODO real condition
-
-            //if not null
-            var cond = line.Split(" ")[1];
-            cond = cond.Substring(0, cond.Length - 1);
+            var cond = line.Substring(3, line.Length - 4);
             var v = Utilities.Convert(cond, variables, current);
-            if (v.type is not RedRust.Nullable _null)
-                throw new Exception("not nullable");
+            if (v.type == Global.u1)
+                v.type = new Condition(Global.u1);
+            if (v.type is not Condition condVar)
+                throw new Exception("not boolean");
 
-            lines.Add(new FuncLine2($"if ({v.var} != NULL) {{"));
-            _null.isNull = false;
+            lines.Add(new FuncLine2($"if ({v.var}) {{"));
             List<Token> l2 = new();
             variables.Push();
+            condVar.InIf(l2, variables, current);
             bool r = ReadBlock(name, returnType, constructor, $"{tabs}\t", className, enumarator, l2, paramameters, variables, includes, new(current));
             lines.Add(new FuncBlock(l2.ToArray()));
 
@@ -291,12 +289,16 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             variables.Pop();
 
             lines.Add(new FuncLine2("}"));
-            _null.isNull = true;
+
             if (!enumarator.Current.Substring(tabs.Length + 1).StartsWith("else"))
+            {
+                condVar.AfterIf(lines, variables, current);
                 continue;
+            }
             lines.Add(new FuncLine2($"else {{"));
             l2 = new();
             variables.Push();
+            condVar.InElse(l2, variables, current);
             r = ReadBlock(name, returnType, constructor, $"{tabs}\t", className, enumarator, l2, paramameters, variables, includes, new(current));
             lines.Add(new FuncBlock(l2.ToArray()));
 
@@ -305,6 +307,8 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             variables.Pop();
 
             lines.Add(new FuncLine2("}"));
+
+            condVar.AfterIf(lines, variables, current);
             continue;
         }
         else if (line.StartsWith("print(\""))

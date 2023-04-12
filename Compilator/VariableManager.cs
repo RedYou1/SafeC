@@ -37,6 +37,18 @@
 
         public Variable Add(string name, Func<string, Variable> var)
         {
+            if (Names.Contains(name))
+                throw new Exception("Cant have multiple variables with the same name");
+            names.Peek().Add(name);
+            var v = var(name);
+            variables.Peek().Add(v);
+            return v;
+        }
+
+        public Variable Add(Func<string, Variable> var)
+        {
+            const string name = "Converter";
+
             if (!Names.Contains(name))
             {
                 names.Peek().Add(name);

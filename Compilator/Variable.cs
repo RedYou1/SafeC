@@ -47,7 +47,7 @@
             this.lifeTime = lifeTime;
         }
 
-        public void DeleteVar(LifeTime current, List<Token> lines, string? line)
+        public virtual void DeleteVar(LifeTime current, List<Token> lines, string? line)
         {
             if (parent.type.isReference())
                 return;
@@ -88,5 +88,13 @@
                 parent.VariableAction = new DeadVariable();
             }
         }
+    }
+
+    internal class RefOwnedVariable : OwnedVariable
+    {
+        public RefOwnedVariable(Variable parent, LifeTime lifeTime)
+            : base(parent, lifeTime) { }
+
+        public override void DeleteVar(LifeTime current, List<Token> lines, string? line) { }
     }
 }

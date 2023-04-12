@@ -38,6 +38,42 @@
                     return (min, lifeA <= lifeB ? a.lifeTime : b.lifeTime, $"{a.var} {c} {b.var}");
                 }
 
+            if (var.Contains($" is "))
+            {
+                string[] args = var.Split($" is ");
+                if (args.Length != 2)
+                    throw new Exception("{var} is {something]");
+                Variable? variable = variables.GetName(args[0], current);
+                if (variable is null)
+                    throw new Exception("cant access variable");
+                args = args[1].Split(" ");
+
+                if (args.Length == 0 || args.Length > 2)
+                    throw new Exception("{var} is type (name) or {var} is (not) null");
+
+
+                if (args.Last().Equals("null"))
+                {
+                    if (variable.type is not Nullable mayBeNull)
+                        throw new Exception("variable is not nullable");
+                    if (args.Length == 1)
+                        return (new NullCondition(Global.u1, mayBeNull), current, $"{variable.name} == NULL");
+                    if (args.Length == 2 && args[0].Equals("not"))
+                        return (new NotNullCondition(Global.u1, mayBeNull), current, $"{variable.name} != NULL");
+                    throw new Exception("is null or is not null");
+                }
+                else
+                {
+                    if (variable.type is not Typed typed)
+                        throw new Exception("variable is not Typed");
+                    Class? cast = Global.GetType(args[0])?.AsClass();
+                    if (cast is null)
+                        throw new Exception("Casting type not found");
+                    return (new TypeCondition(Global.u1, variable.name, typed, cast, args.Length == 2 ? args[1] : null),
+                        current, $"{variable.name}->type == Extend${typed.contain.name}${cast.name}");
+                }
+            }
+
             string[] vars = var.Split('.');
             string r = vars[0];
             Type? type;
@@ -128,7 +164,7 @@
                     var type = Convert(r, variables, current).type!;
                     if (last is not null)
                         last.VariableAction = new DeadVariable();
-                    last = variables.Add("Converter", s => new(s, type, current));
+                    last = variables.Add(s => new(s, type, current));
                     lines.Add(new FuncLine($"{f._null!.id} {last.name} = {r}"));
                     r = $"&{last.name}";
                 }
@@ -142,7 +178,7 @@
                     if (!includes.Contains(f._explicit.Value.converter))
                         includes.Add(f._explicit.Value.converter);
 
-                    last = variables.Add("Converter", s => new(s, f._explicit.Value.converter.returnType, current));
+                    last = variables.Add(s => new(s, f._explicit.Value.converter.returnType, current));
                     lines.Add(new FuncLine(
                         $"{f._explicit.Value.converter.returnType.id} {last.name} = {f._explicit.Value.converter.name}({r})"));
                     r = last.name;

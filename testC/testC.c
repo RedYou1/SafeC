@@ -54,12 +54,28 @@ void C_DeConstruct(C* this) {
 void C_Add(C* this) {
 	this->a = this->a + 2;
 }
+void B_Print(B* this) {
+	printf("Hello World {");
+	if (this == NULL) {
+		printf("null");
+	}
+	else {
+		printf("%s", this->b->ptr);
+	}
+	printf("}\n");
+}
 void Add(Typed$A* a) {
 	if (a->type == Extend$A$A) {
 		A_Add(a->ptr);
 	}
 	else if (a->type == Extend$A$C) {
 		C_Add(a->ptr);
+	}
+	if (a->type == Extend$A$C) {
+		C* c = a->ptr;
+		B* b = c->b;
+		B_Print(b);
+		printf("add is type C\n");
 	}
 	Typed$A_DeConstruct(a);
 }
@@ -123,16 +139,6 @@ Typed$A* C_to_Typed$A(C* this) {
 }
 void A_Add2(A* this, int b) {
 	this->a = this->a + b;
-}
-void B_Print(B* this) {
-	printf("Hello World {");
-	if (this != NULL) {
-		printf("%s", this->b->ptr);
-	}
-	else {
-		printf("null");
-	}
-	printf("}\n");
 }
 B* createB() {
 	B* b = B_Construct();

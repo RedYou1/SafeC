@@ -21,10 +21,10 @@ class B:
 
 	void Print(&dyn this?):
 		print("Hello World {")
-		if this:
-			print(this.b)
-		else:
+		if this is null:
 			print("null")
+		else:
+			print(this.b)
 		print("}\n")
 
 class C(A):
@@ -49,12 +49,16 @@ fn B createB():
 	return b
 
 fn C createC(i32? a,str id):
-	if a:
+	if a is not null:
 		return new C(a,id)
 	return new C(id)
 
 fn void Add(&typedyn A a):
 	a.Add()
+	if a is C c:
+		B b = c.b
+		b.Print()
+		print("add is type C\n")
 
 fn void TakeOwner(A a):
 	print(a.a)
