@@ -73,17 +73,17 @@
             _string = new String(this, _char, u64);
             _str = new Reference(new("const char"));
 
-            _string.implicitCast.Add((_str, (string arg) => $"{arg}->ptr"));
+            _string.implicitCast.Add((_str, (string arg) => $"{arg}.ptr"));
 
             _str.explicitCast.Add((new Function("str_toString", _string,
                 new Variable[]
                 {
                     new ("this",_str,new ())
                 }, new(),
-               new FuncLine($"{_string.id} newthis = ({_string.id})malloc(sizeof({_string.name}))"),
-               new FuncLine($"newthis->len = strlen(this)"),
-               new FuncLine($"newthis->ptr = ({_char.id}*)malloc(newthis->len + 1)"),
-               new FuncLine($"memcpy(newthis->ptr, this, newthis->len + 1)"),
+               new FuncLine($"{_string.id} newthis"),
+               new FuncLine($"newthis.len = strlen(this)"),
+               new FuncLine($"newthis.ptr = ({_char.id}*)malloc(newthis.len + 1)"),
+               new FuncLine($"memcpy(newthis.ptr, this, newthis.len + 1)"),
                new FuncLine("return newthis")), true));
 
             types.Add("string", _string);
@@ -94,7 +94,7 @@
             {
                 typesNames.Add(type.Key);
                 if (type.Value is Class p)
-                    typesNames.Add(p.name);
+                    typesNames.Add(p.id);
             }
         }
 

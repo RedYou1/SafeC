@@ -5,7 +5,7 @@
         public readonly TypeEnum typeEnum;
         public readonly Class contain;
         public Typed(Class of, TypeEnum typeEnum)
-            : base($"Typed${of.name.Replace('*', '$')}",
+            : base($"Typed${of.id.Replace('*', '$')}",
                   new Variable[] {
                       new("ptr",new Reference(of),new()),
                       new("type",typeEnum,null)
@@ -20,24 +20,24 @@
             this.typeEnum = typeEnum;
             LifeTime cc = new();
             constructs.Add(
-                new($"{name}_Construct", this,
+                new($"{id}_Construct", this,
                 new Variable[] {
                 new( "ptr",new Reference(of),cc),
                 new("type",typeEnum,cc)
                 }, new(),
-                new FuncLine($"{id} this = ({id})malloc(sizeof({name}))"),
-                new FuncLine("this->ptr = ptr"),
-                new FuncLine("this->type = type"),
+                new FuncLine($"{id} this"),
+                new FuncLine("this.ptr = ptr"),
+                new FuncLine("this.type = type"),
                 new FuncLine("return this")));
         }
 
         public override List<ToCallFunc> GetFunctions(string funcName, (Type type, LifeTime lifeTime)[] args, LifeTime current)
         {
-            args[0] = (contain, current);
+            args[0] = (new Reference(contain), current);
             List<ToCallFunc> func = contain.GetFunctions(funcName, args, current);
             foreach (var c in contain.inherit)
             {
-                args[0] = (c, current);
+                args[0] = (new Reference(c), current);
                 func.AddRange(c.GetFunctions(funcName, args, current));
             }
             return func;

@@ -11,11 +11,11 @@
         }
     }
 
-    internal class Null : Type
+    internal class Null : Pointer
     {
         public static readonly Null Instance = new Null();
         public Null()
-            : base("null")
+            : base(new("null"), false)
         {
         }
     }

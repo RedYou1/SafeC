@@ -33,16 +33,30 @@
             {
                 Type a = this;
                 Type b = other;
-                if (this is Reference t)
+                while (a is Reference t)
                     a = t.of;
-                if (other is Reference t2)
+                while (b is Reference t2)
                     b = t2.of;
                 if (a.TypeEquals(b))
-                    return new() { Converter.Success };
+                    if (this is Pointer && other is not Pointer)
+                        return new() { Converter.NewImplicit(v => $"&{v}") };
+                    else if (this is not Pointer && other is Pointer)
+                        return new() { Converter.NewImplicit(v => $"*{v}") };//TODO does it own it?
+                    else
+                        return new() { Converter.Success };
             }
 
-            if (this is Nullable n && n.of.Equals(other))
-                return new() { other is Pointer ? Converter.Success : Converter.NewNull(n.of) };
+            if (this is Nullable n)
+            {
+                Type a = n.of;
+                Type b = other;
+                while (a is Reference t)
+                    a = t.of;
+                while (b is Reference t2)
+                    b = t2.of;
+                if (a.TypeEquals(b))
+                    return new() { other is Pointer ? Converter.Success : Converter.NewNull(n.of) };
+            }
 
             foreach (var t in other.implicitCast)
             {
@@ -85,11 +99,11 @@
                 return new() { Converter.NewExplicit(_other.explicitCast.First(e => e.converter.returnType.Equals(_class))) };
 
             (Function converter, bool toDelete) a =
-                (new Function($"{_other.name}_to_{_class.name}", _class,
+                (new Function($"{_other.id}_to_{_class.id}", _class,
                 new Variable[] { new("this", _other, new()) }, new(),
-                    new FuncLine($"{_class.id} t = ({_class.id})malloc(sizeof({_class.name}))"),
-                    new FuncLine("t->ptr = this"),
-                    new FuncLine($"t->type = {_class.typeEnum.id}${_other.name}"),
+                    new FuncLine($"{_class.id} t"),
+                    new FuncLine("t.ptr = &this"),
+                    new FuncLine($"t.type = {_class.typeEnum.id}${_other.id}"),
                     new FuncLine("return t")
                 ), true);
             _other.explicitCast.Add(a);
@@ -166,7 +180,12 @@
         }
     }
 
-    internal class Dynamic : Modifier
+    internal class Reference : Modifier
+    {
+        public Reference(Type of) : base(of) { }
+    }
+
+    internal class Dynamic : Reference
     {
 
         public Dynamic(Type of) : base(of) { }
@@ -197,10 +216,5 @@
             }
             return function;
         }
-    }
-
-    internal class Reference : Modifier
-    {
-        public Reference(Type of) : base(of) { }
     }
 }

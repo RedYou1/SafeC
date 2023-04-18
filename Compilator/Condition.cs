@@ -65,7 +65,7 @@
         {
             VarName = varName;
             CurrentType = currentType;
-            Cast = cast;
+            Cast = new Reference(cast);
             Name = name;
         }
 
@@ -75,7 +75,7 @@
                 return;
             var v = variables.Add(Name, (name) => new(name, Cast, current));
             v.VariableAction = new RefOwnedVariable(v, current);
-            lines.Add(new FuncLine($"{Cast.id} {v.name} = {VarName}->ptr"));
+            lines.Add(new FuncLine($"{Cast.id} {v.name} = {VarName}.ptr"));
         }
         public override void InElse(List<Token> lines, VariableManager variables, LifeTime current) { }
         public override void AfterIf(List<Token> lines, VariableManager variables, LifeTime current) { }
@@ -92,7 +92,7 @@
         {
             VarName = varName;
             CurrentType = currentType;
-            Cast = cast;
+            Cast = new Reference(cast);
             Name = name;
         }
 
@@ -104,7 +104,7 @@
                 return;
             var v = variables.Add(Name, (name) => new(name, Cast, current));
             v.VariableAction = new RefOwnedVariable(v, current);
-            lines.Add(new FuncLine($"{Cast.id} {v.name} = {VarName}->ptr"));
+            lines.Add(new FuncLine($"{Cast.id} {v.name} = {VarName}.ptr"));
         }
     }
 }

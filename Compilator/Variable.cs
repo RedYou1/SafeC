@@ -59,7 +59,7 @@
             string pre = string.Empty;
             var _class = parent.type.AsClass();
 
-            if (_class is null)
+            if (_class is null || _class.deconstruct is null)
                 return;
 
             if (line is null || !parent.name.Equals(line.Substring(0, line.Length - 1)))
@@ -79,11 +79,14 @@
                     t = mod.of;
                 }
 
-                lines.Add(new FuncLine($"{pre}{_class.name}_DeConstruct({parent.name})"));
-
                 if (t is Nullable n2)
+                {
+                    lines.Add(new FuncLine($"{pre}{_class.id}_DeConstruct(*{parent.name})"));
                     if (n2.isNull)
                         lines.Add(new FuncLine2($"}}"));
+                }
+                else
+                    lines.Add(new FuncLine($"{pre}{_class.id}_DeConstruct({parent.name})"));
 
                 parent.VariableAction = new DeadVariable();
             }

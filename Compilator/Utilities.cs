@@ -76,10 +76,10 @@
                         throw new Exception("Casting type not found");
                     if (isnot)
                         return (new NotTypeCondition(Global.u1, variable.name, typed, cast, args.Length == 2 ? args[1] : null),
-                            current, $"{variable.name}->type != Extend${typed.contain.name}${cast.name}");
+                            current, $"{variable.name}.type != Extend${typed.contain.id}${cast.id}");
                     else
                         return (new TypeCondition(Global.u1, variable.name, typed, cast, args.Length == 2 ? args[1] : null),
-                            current, $"{variable.name}->type == Extend${typed.contain.name}${cast.name}");
+                            current, $"{variable.name}.type == Extend${typed.contain.id}${cast.id}");
                 }
             }
 
@@ -140,14 +140,17 @@
                     {
                         string name = vars[i].Split("(")[0];
                         //TODO call function
-                        r = $"{_class.name}_{name}({r},{vars[i].Substring(name.Length + 1, vars[i].Length - name.Length - 2)})";
+                        r = $"{_class.id}_{name}({r},{vars[i].Substring(name.Length + 1, vars[i].Length - name.Length - 2)})";
                         break;
                     }
                     else if (_class.variables.Any((a) => a.name.Equals(vars[i])))
                     {
                         var v = _class.variables.First((a) => a.name.Equals(vars[i]));
+                        if (type.isReference() || type is Nullable)
+                            r += $"->{v.name}";
+                        else
+                            r += $".{v.name}";
                         type = v.type;
-                        r += $"->{v.name}";
                         break;
                     }
                     _class = _class.extend;
@@ -170,12 +173,19 @@
                 }
                 if (f.state == ConverterEnum.ToNull)
                 {
-                    var type = Convert(r, variables, current).type!;
                     if (last is not null)
                         last.VariableAction = new DeadVariable();
-                    last = variables.Add(s => new(s, type, current));
-                    lines.Add(new FuncLine($"{f._null!.id} {last.name} = {r}"));
-                    r = $"&{last.name}";
+                    last = variables.Add(s => new(s, f._null!, current));
+                    if (f._null!.isReference())
+                    {
+                        lines.Add(new FuncLine($"{f._null!.id} {last.name} = &{r}"));
+                        r = last.name;
+                    }
+                    else
+                    {
+                        lines.Add(new FuncLine($"{f._null!.id} {last.name} = {r}"));
+                        r = $"&{last.name}";
+                    }
                 }
                 else if (f.state == ConverterEnum.Implicit)
                     r = f._implicit!(r);
@@ -201,7 +211,7 @@
 
         private string PutArgs(Function func, List<Converter>[] converts, string[] argsLine, List<Token> lines, VariableManager variables, List<Includable> includes, LifeTime current)
         {
-            if (converts.Length < argsLine.Length)
+            if (converts.Length != argsLine.Length)
                 throw new Exception("Size");
             string funcLine = string.Empty;
             for (int i = 0; i < argsLine.Length; i++)
@@ -215,29 +225,36 @@
             return funcLine;
         }
 
-        private Type callFunction(string prefix, List<Token> lines, ToCallFunc func, string[] argsLine, string variableName, VariableManager variables, List<Includable> includes, LifeTime current)
+        private Type callFunction(string prefix, Type? supposedReturn, List<Token> lines, ToCallFunc func, string[] argsLine, VariableManager variables, List<Includable> includes, LifeTime current)
         {
             if (!includes.Contains(func.func))
                 includes.Add(func.func);
 
-            string funcLine = string.Empty;
-
-            if (!string.IsNullOrEmpty(variableName))
-                funcLine += $"{variableName}, ";
-
-            funcLine += PutArgs(func.func, func.converts, argsLine, lines, variables, includes, current);
+            string funcLine = PutArgs(func.func, func.converts, argsLine, lines, variables, includes, current);
 
             if (funcLine.Length >= 2)
                 funcLine = funcLine.Substring(0, funcLine.Length - 2);
 
-            lines.Add(new FuncLine($"{prefix}{func.func.name}({funcLine})"));
-            return func.func.returnType;
+            if (supposedReturn is not null)
+            {
+                var c = supposedReturn.Equivalent(func.func.returnType);
+                if (c is null)
+                    throw new Exception($"Can't convert {func.func.returnType.id} to {supposedReturn.id}");
+                var t = ConvertVariable(lines, variables, includes, current, c, $"{func.func.name}({funcLine})");
+                lines.Add(new FuncLine($"{prefix}{t.toPut}"));
+                return supposedReturn;
+            }
+            else
+            {
+                lines.Add(new FuncLine($"{prefix}{func.func.name}({funcLine})"));
+                return func.func.returnType;
+            }
         }
 
-        public Type callFunctions(Class? of, string prefix, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, VariableManager variables, List<Includable> includes, LifeTime current)
+        public Type callFunctions(Class? of, string prefix, Type? supposedReturn, List<Token> lines, List<ToCallFunc> funcs, string[] argsLine, string variableName, VariableManager variables, List<Includable> includes, LifeTime current)
         {
             if (of is null || of is not Typed typed)
-                return callFunction(prefix, lines, funcs.First(), argsLine, variableName, variables, includes, current);
+                return callFunction(prefix, supposedReturn, lines, funcs.First(), argsLine, variables, includes, current);
 
             string pre = string.Empty;
 
@@ -249,9 +266,8 @@
                 if (!includes.Contains(param.func))
                     includes.Add(param.func);
 
-                lines.Add(new FuncLine2($"{pre}if ({variableName}->type == Extend${typed.contain.name}${param.of.name}) {{"));
-
-                callFunction(prefix + '\t', lines, param, argsLine, $"{variableName}->ptr", variables, includes, current);
+                lines.Add(new FuncLine2($"{pre}if ({variableName}.type == Extend${typed.contain.id}${param.of.id}) {{"));
+                callFunction(prefix + '\t', supposedReturn, lines, param, argsLine, variables, includes, current);
 
                 lines.Add(new FuncLine2("}"));
                 pre = "else ";
@@ -264,12 +280,11 @@
                     includes.Add(f.func);
 
                 lines.Add(new FuncLine2("else {"));
-
-                callFunction(prefix + '\t', lines, f, argsLine, $"{variableName}->ptr", variables, includes, current);
+                callFunction(prefix + '\t', supposedReturn, lines, f, argsLine, variables, includes, current);
 
                 lines.Add(new FuncLine2("}"));
             }
-            return funcs.First().func.returnType;
+            return supposedReturn ?? funcs.First().func.returnType;
         }
     }
 }

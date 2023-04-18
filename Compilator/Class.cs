@@ -1,25 +1,25 @@
 ﻿namespace RedRust
 {
-    internal class Class : Pointer, Incluer
+    internal class Class : Type, Incluer
     {
         public List<Includable> includes { get; }
         public bool included { get; set; } = false;
 
-        public readonly string name;
         public readonly Variable[] variables;
         public readonly Variable[] allVariables;
 
         public readonly List<Function> constructs;
         public readonly List<Function> functions;
 
+        public Function? deconstruct;
+
         public readonly Class? extend;
         public List<Class> inherit = new();
         public Typed? typed = null;
 
         public Class(string name, Variable[] variables, Class? extend)
-            : base(new(name))
+            : base(name)
         {
-            this.name = name;
             CanDeconstruct = true;
             this.variables = variables;
 
@@ -45,7 +45,7 @@
             if (functions is not null)
             {
                 List<Converter>[]? converts = null;
-                Function? func = functions.FirstOrDefault(f => f.name.StartsWith($"{name}_{funcName}") && (converts = f.CanExecute(args)) is not null);
+                Function? func = functions.FirstOrDefault(f => f.name.StartsWith($"{id}_{funcName}") && (converts = f.CanExecute(args)) is not null);
                 if (func is not null && converts is not null)
                     return new() { new(this, func, converts) };
             }
@@ -70,23 +70,12 @@
             foreach (var include in includes)
                 include.Compile(tabs, sw);
 
-            sw.WriteLine($$"""{{tabs}}typedef struct {{name}} {""");
+            sw.WriteLine($$"""{{tabs}}typedef struct {{id}} {""");
             foreach (var v in allVariables)
                 sw.WriteLine($"{tabs}\t{v.type.id} {v.name};");
-            sw.WriteLine($$"""{{tabs}}}{{name}};""");
+            sw.WriteLine($$"""{{tabs}}}{{id}};""");
 
-            sw.WriteLine($"{tabs}void {name}_DeConstruct({id} this) {{");
-            foreach (Variable line in variables)
-            {
-                if (line.type.isReference())
-                    continue;
-                if (line.type is Class _class)
-                    sw.WriteLine($"{tabs}\t{_class.name}_DeConstruct(this->{line.name});");
-                else if (line.type is Pointer)
-                    sw.WriteLine($"{tabs}\tfree(this->{line.name});");
-            }
-            sw.WriteLine($"{tabs}\tfree(this);");
-            sw.WriteLine($"{tabs}}}");
+            deconstruct?.Compile(tabs, sw);
 
             if (typed is not null)
             {

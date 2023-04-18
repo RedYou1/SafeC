@@ -25,15 +25,15 @@
     {
         public readonly Class of;
         public TypeEnum(Class of)
-            : base($"Extend${of.name}", new string[0])
+            : base($"Extend${of.id}", new string[0])
         {
             this.of = of;
         }
 
         public override void Compile(string tabs, StreamWriter sw)
         {
-            var l = new List<string>() { $"{id}${of.name}" };
-            l.AddRange(of.inherits().Select(a => $"{id}${a.name}"));
+            var l = new List<string>() { $"{id}${of.id}" };
+            l.AddRange(of.inherits().Select(a => $"{id}${a.id}"));
             possibilities = l.ToArray();
             base.Compile(tabs, sw);
         }

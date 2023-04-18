@@ -30,7 +30,7 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
     if (constructor)
     {
         name = string.Join(string.Empty, declaration.TakeWhile(a => a != '('));
-        returnType = className!;
+        returnType = new Reference(className!);
         declaration = declaration.Substring(name.Length + 1, declaration.Length - name.Length - 3);
     }
     else
@@ -45,7 +45,7 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
         declaration = declaration.Substring(d + 1, declaration.Length - declaration.IndexOf('(') - 3);
         if (className is not null)
         {
-            name = $"{className.name}_{name}";
+            name = $"{className.id}_{name}";
         }
 
         name = Global.functionNames.Ask(name);
@@ -66,7 +66,7 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
         if (!stringparams[0].Contains("this"))
             throw new Exception("the first parameter of class function should be a 'this' parameter");
 
-        paramameters.Add(new("this", Global.GetType(stringparams[0].Replace("this", className.name)), current));
+        paramameters.Add(new("this", Global.GetType(stringparams[0].Replace("this", className.id)), current));
         stringparams = stringparams.Skip(1).ToArray();
     }
     foreach (var var in stringparams)
@@ -81,7 +81,7 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
     List<Token> lines = new();
     if (constructor)
     {
-        variables.Add("this", s => new(s, className!, current));
+        variables.Add("this", s => new(s, new Reference(className!), current));
     }
 
     foreach (var var in paramameters)
@@ -157,7 +157,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
 
                 string varName = firstSplit.Last();
 
-                var v = AssignVariable(variables, current, true, lines, $"{type.id} {varName} = ", equal[1], type, includes, constructor);
+                var v = AssignVariable(variables, current, true, lines, $"{type.id} {varName} = ", equal[1], type, includes);
                 if (v is not null)
                 {
                     AddTypeToInclude(includes, v.type);
@@ -186,16 +186,24 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                     string funcName = line.Substring(1).Split('(')[0].Split(' ')[0];
                     if (line.ElementAt(funcName.Length + 1) == '(')
                     {
+                        line = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 3);
                         var args = new List<(RedRust.Type type, LifeTime lifeTime)>() { (variable.type, variable.lifeTime) };
-                        var argsLine = splitArgs(line.Substring(funcName.Length + 2, line.Length - funcName.Length - 3));
-                        foreach (var a in argsLine)
+                        var argsLine = new List<string>();
+
+                        if (variable.type is Typed t)
+                            argsLine.Add($"{variable.name}{(t.isReference() || t is RedRust.Nullable ? "->" : ".")}ptr");
+                        else
+                            argsLine.Add(variable.name);
+
+                        var temp = splitArgs(line);
+                        argsLine.AddRange(temp);
+                        foreach (var a in temp)
                         {
                             args.Add(ConvertToArgs(a, variables, current));
                         }
                         var func = _class.GetFunctions(funcName, args.ToArray(), current);
-                        line = line.Substring(funcName.Length + 2, line.Length - funcName.Length - 3);
 
-                        Utilities.callFunctions(_class, string.Empty, lines, func, argsLine, variable.name, variables, includes, current);
+                        Utilities.callFunctions(_class, string.Empty, null, lines, func, argsLine.ToArray(), variable.name, variables, includes, current);
                     }
                     else if (_class.allVariables.Any(v => v.name.Equals(funcName)))
                     {
@@ -206,7 +214,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                             r.DeleteVar(current, lines, line);
 
                         string[] e = line.Split(" = ");
-                        var l = AssignVariable(variables, current, false, lines, $"this->{e[0].Substring(1)} = ", e[1], v.type, includes, constructor);
+                        var l = AssignVariable(variables, current, false, lines, $"this{(variable.type.isReference() ? "->" : ".")}{e[0].Substring(1)} = ", e[1], v.type, includes);
                         if (l is not null)
                             if (r.lifeTime is null)
                                 l.VariableAction = new DeadVariable();
@@ -214,13 +222,13 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                                 l.VariableAction = new OwnedVariable(l, r.lifeTime);
                     }
                     else
-                        throw new Exception($"cant find value {funcName} in object of type {_class.name} named {variable.name}");
+                        throw new Exception($"cant find value {funcName} in object of type {_class.id} named {variable.name}");
                 }
                 else
                 {
                     //reasign
                     variable.DeleteVar(current, lines, line);
-                    var v = AssignVariable(variables, current, true, lines, $"{variable.name} = ", line.Substring(3), variable.type, includes, constructor);
+                    var v = AssignVariable(variables, current, true, lines, $"{variable.name} = ", line.Substring(3), variable.type, includes);
                     if (v is not null && v != variable)
                     {
                         if (v.lifeTime is not null)
@@ -234,7 +242,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                 variable = variables.Variables.First(v => line.StartsWith(v.name));
                 //reasign
                 variable.DeleteVar(current, lines, line);
-                var v = AssignVariable(variables, current, true, lines, $"{variable.name} = ", line.Substring(3), variable.type, includes, constructor);
+                var v = AssignVariable(variables, current, true, lines, $"{variable.name} = ", line.Substring(variable.name.Length + 3), variable.type, includes);
                 if (v is not null && v != variable)
                 {
                     if (v.lifeTime is not null)
@@ -266,7 +274,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
             line = line.Substring(7);
 
             List<Token> temp = new();
-            Variable? v = AssignVariable(variables, current, false, temp, $"return ", line, returnType, includes, constructor);
+            Variable? v = AssignVariable(variables, current, false, temp, $"return ", line, returnType, includes);
 
             foreach (Variable vs in variables.Variables)
                 if (v != vs)
@@ -358,27 +366,30 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
         }
         else if (line.StartsWith("base("))
         {
-            if (!variables.Variables.Any(v => v.name.Equals("this") && v.type is Class _class && _class.extend is not null))
+            if (!variables.Variables.Any(v => v.name.Equals("this") && v.type is Reference r && r.of is Class _class && _class.extend is not null))
                 throw new Exception($"function base not supported in that context:{line}");
-            var v = variables.Variables.First(v => v.name.Equals("this") && v.type is Class _class && _class.extend is not null);
+            var v = variables.Variables.First(v => v.name.Equals("this") && v.type is Reference r && r.of is Class _class && _class.extend is not null);
             string funcName = line.Split('(')[0];
             line = line.Substring(funcName.Length + 1, line.Length - funcName.Length - 2);
 
-            Class _class = ((Class)v.type).extend!;
+            Class _class = ((Class)((Reference)v.type).of).extend!;
 
-            var stringargs = splitArgs(line);
+            var stringargs = new List<string>() { "this" };
 
-            List<(RedRust.Type type, LifeTime lifeTime)> args = new() { (_class, v.lifeTime) };
+            List<(RedRust.Type type, LifeTime lifeTime)> args = new() { (new Reference(_class), v.lifeTime) };
             if (!string.IsNullOrWhiteSpace(line))
-                args.AddRange(stringargs.Select(a => ConvertToArgs(a, variables, current)));
-
+            {
+                var temp = splitArgs(line);
+                stringargs.AddRange(temp);
+                args.AddRange(temp.Select(a => ConvertToArgs(a, variables, current)));
+            }
 
             List<Converter>[]? converts = null;
             Function? function = _class.constructs.FirstOrDefault(f => (converts = f.CanExecute(args.ToArray())) is not null);
             if (function is null || converts is null)
-                throw new Exception($"base constructor not found in class {_class.name} for {v.type.id}");
+                throw new Exception($"base constructor not found in class {_class.id} for {v.type.id}");
 
-            Utilities.callFunctions(_class, string.Empty, lines, new() { new(_class, function, converts) }, stringargs, "this", variables, includes, current);
+            Utilities.callFunctions(_class, string.Empty, null, lines, new() { new(_class, function, converts) }, stringargs.ToArray(), "this", variables, includes, current);
         }
         else if (line.Contains("("))
         {
@@ -392,7 +403,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
                 args.Add(ConvertToArgs(a, variables, current));
             }
             var func = Global.GetFunctions(funcName, args.ToArray(), current);
-            Utilities.callFunctions(null, string.Empty, lines, new() { func }, stringargs, string.Empty, variables, includes, current);
+            Utilities.callFunctions(null, string.Empty, null, lines, new() { func }, stringargs, string.Empty, variables, includes, current);
         }
         else
             throw new Exception($"func line couldnt be interpreted:{line}");
@@ -414,14 +425,13 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
     return (v.type, v.lifeTime);
 }
 
-Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDelete, List<Token> lines, string preEqual, string afterEqual, RedRust.Type type, List<Includable> includes, bool constructor)
+Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDelete, List<Token> lines, string preEqual, string afterEqual, RedRust.Type type, List<Includable> includes)
 {
     if (afterEqual.EndsWith(")"))
     {
         Class? _class = null;
         List<ToCallFunc> function = new();
         string[] stringargs;
-        string variableName = string.Empty;
 
         if (afterEqual.StartsWith("new "))
         {
@@ -429,7 +439,7 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
             if (_class is null)
                 throw new Exception("class is null");
 
-            afterEqual = afterEqual.Substring(_class.name.Length + 5, afterEqual.Length - _class.name.Length - 6);
+            afterEqual = afterEqual.Substring(_class.id.Length + 5, afterEqual.Length - _class.id.Length - 6);
 
             stringargs = splitArgs(afterEqual);
 
@@ -438,14 +448,13 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
             List<Converter>[]? converts = null;
             var f = _class.constructs.FirstOrDefault(f => (converts = f.CanExecute(args)) is not null);
             if (f is null || converts is null)
-                throw new Exception($"constructor not found in class {_class.name}");
+                throw new Exception($"constructor not found in class {_class.id}");
             function = new() { new(_class, f, converts) };
         }
         else if (afterEqual.Split("(")[0].Contains("."))
         {
             string prePara = afterEqual.Split("(")[0];
             string[] ob = prePara.Split(".");
-            variableName = ob[0];
             var variable = variables.GetName(ob[0], current);
 
             if (variable is null)
@@ -460,6 +469,10 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
             {
                 args.Add(ConvertToArgs(a, variables, current));
             }
+
+            var temp = new List<string>() { ob[0] };
+            temp.AddRange(stringargs);
+            stringargs = temp.ToArray();
 
             _class = variable.type.AsClass();
             if (_class is null)
@@ -488,7 +501,7 @@ Variable? AssignVariable(VariableManager variables, LifeTime current, bool toDel
 
         if (function.Count == 1)
         {
-            return new Variable(string.Empty, Utilities.callFunctions(_class, preEqual, lines, function, stringargs, variableName, variables, includes, current), current);
+            return new Variable(string.Empty, Utilities.callFunctions(_class, preEqual, type, lines, function, stringargs, string.Empty, variables, includes, current), current);
         }
         else
             throw new Exception("not implemented");
@@ -571,6 +584,26 @@ IEnumerable<Token> Interpret(string pathin)
             Global.types.Add(name, c);
             extend?.inherit.Add(c);
 
+            List<Includable> includesDeconstruct = new();
+            List<Token> deconstructLines = new();
+            foreach (Variable line in variables)
+            {
+                if (line.type.isReference())
+                    continue;
+                if (line.type is Class _class && _class.deconstruct is not null)
+                {
+                    var converts = _class.deconstruct.CanExecute(new[] { (line.type, current) });
+                    if (converts is null)
+                        throw new Exception("Convert delete class variable");
+                    ToCallFunc call = new(_class, _class.deconstruct, converts);
+                    var vars = new VariableManager();
+                    vars.Add(s => new Variable("this", c, current));
+                    Utilities.callFunctions(_class, string.Empty, null, deconstructLines, new List<ToCallFunc>() { call }, new string[] { $"this.{line.name}" }, string.Empty, vars, includesDeconstruct, current);
+                }
+            }
+            if (deconstructLines.Any())
+                c.deconstruct = new Function($"{c.id}_DeConstruct", Global._void, new Variable[] { new("this", c, current) }, includesDeconstruct, deconstructLines.ToArray());
+
             do
             {
                 if (string.IsNullOrWhiteSpace(enumarator.Current))
@@ -581,7 +614,8 @@ IEnumerable<Token> Interpret(string pathin)
 
                 List<Token> t = new()
                 {
-                    new FuncLine($"{c.id} this = ({c.id})malloc(sizeof({c.name}))")
+                    new FuncLine($"{c.id} _this"),
+                    new FuncLine($"{c.id}* this = &_this")
                 };
                 t.AddRange(func.lines);
 
