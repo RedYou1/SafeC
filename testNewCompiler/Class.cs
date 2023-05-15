@@ -15,7 +15,7 @@ namespace RedRust
 
 
         public Class(string name, Class? extends)
-            : base(name, $"{(extends is null ? "" : $"{extends.FullName}{ClassSep}")}{name}")
+            : base(name, $"{ClassSep}{(extends is null ? "" : $"{extends.FullName}{ClassSep}")}{name}")
         {
             Extends = extends;
 
@@ -40,20 +40,32 @@ namespace RedRust
             return temp.DistinctBy((c) => c.Value.Name);
         }
 
+        public new Func GetFunc(string name)
+        {
+            Func? f = TryGetFunc($"{FullName}{FuncSep}{name}");
+            if (f is null && Extends is not null)
+                f = Extends.GetFunc(name);
+            if (f is null)
+                throw new Exception("function doesnt exists");
+            return f;
+        }
+
         public override void Compile()
         {
             if (compiled)
                 return;
             compiled = true;
 
+            var vars = GetVars();
+            foreach (var v in vars)
+                v.Value.Compile();
+
             StreamWriter sw = Compiler.Instance.StreamWriter;
 
             sw.WriteLine($$"""typedef struct {{Name}} {""");
-            foreach (var v in GetVars())
+            foreach (var v in vars)
                 sw.WriteLine($"\t{v.Value.Name} {v.Key.Split(VarSep).Last()};");
             sw.WriteLine($$"""}{{Name}};""");
-
-            throw new NotImplementedException();
         }
     }
 }

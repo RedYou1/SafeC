@@ -12,7 +12,7 @@ namespace RedRust
         public readonly Class? Of;
 
         public Func(string name, Class? of)
-            : base(name, $"{(of is null ? "" : $"{of.FullName}{FuncSep}")}{name}")
+            : base(name, $"{FuncSep}{(of is null ? "" : $"{of.FullName}{FuncSep}")}{name}")
         {
             Of = of;
 

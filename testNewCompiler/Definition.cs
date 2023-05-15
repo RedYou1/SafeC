@@ -6,7 +6,12 @@ using System.Threading.Tasks;
 
 namespace RedRust
 {
-    internal abstract class Definition
+    internal interface Compilable
+    {
+        public void Compile();
+    }
+
+    internal abstract class Definition : Compilable
     {
         public const char ClassSep = '.';
         public const char VarSep = ':';
@@ -18,6 +23,33 @@ namespace RedRust
         {
             if (!Definitions.TryAdd(name, def))
                 throw new Exception("duplicate name");
+        }
+
+        public static Class GetClass(string name)
+        {
+            if (!Definitions.TryGetValue($"{ClassSep}{name}", out var def) || def is null)
+                throw new Exception("class name not found");
+            if (def is not Class c)
+                throw new Exception("def is not class");
+            return c;
+        }
+
+        public static Func? TryGetFunc(string name)
+        {
+            if (!Definitions.TryGetValue($"{FuncSep}{name}", out var def) || def is null)
+                return null;
+            if (def is not Func f)
+                return null;
+            return f;
+        }
+
+        public static Func GetFunc(string name)
+        {
+            if (!Definitions.TryGetValue($"{FuncSep}{name}", out var def) || def is null)
+                throw new Exception("class name not found");
+            if (def is not Func f)
+                throw new Exception("def is not class");
+            return f;
         }
 
 
@@ -34,17 +66,15 @@ namespace RedRust
         public abstract void Compile();
     }
 
-    internal class Integer : Definition
+    internal class Integer : Class
     {
         static Integer()
         {
-            AddDef("int", new Integer());
+            new Integer();
         }
 
         private Integer()
-        {
-
-        }
+            : base("int", null) { }
 
         public override void Compile() { }
     }
