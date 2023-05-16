@@ -34,18 +34,18 @@ namespace RedRust
             return c;
         }
 
-        public static Func? TryGetFunc(string name)
+        public static Func? TryGetFunc(Class? of, string name)
         {
-            if (!Definitions.TryGetValue($"{FuncSep}{name}", out var def) || def is null)
+            if (!Definitions.TryGetValue($"{(of is null ? "" : $"{ClassSep}{of.FullName}")}{FuncSep}{name}", out var def) || def is null)
                 return null;
             if (def is not Func f)
                 return null;
             return f;
         }
 
-        public static Func GetFunc(string name)
+        public static Func GetFunc(Class? of, string name)
         {
-            if (!Definitions.TryGetValue($"{FuncSep}{name}", out var def) || def is null)
+            if (!Definitions.TryGetValue($"{(of is null ? "" : $"{ClassSep}{of.FullName}")}{FuncSep}{name}", out var def) || def is null)
                 throw new Exception("class name not found");
             if (def is not Func f)
                 throw new Exception("def is not class");

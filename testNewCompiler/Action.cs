@@ -8,51 +8,62 @@ namespace RedRust
 {
     internal class Memory
     {
-        public Dictionary<string, Class> instances;
+        private Memory? Extends;
+        private Dictionary<string, Class> Instances;
 
 
-        public Memory(Memory? memory)
+        public Memory(Memory? memory, Dictionary<string, Class>? instances)
         {
-            instances = memory is null ? new() : new(memory.instances);
+            Extends = memory;
+            Instances = instances ?? new();
+        }
+
+        public bool Contains(string name)
+        {
+            if (Extends is not null && Extends.Contains(name))
+                return true;
+            return Instances.ContainsKey(name);
+        }
+
+        public void AddVar(string name, Class var)
+        {
+            if (Contains(name))
+                throw new Exception("name already used");
+            Instances.Add(name, var);
         }
     }
 
     internal interface ActionLine
     {
-        public void DoAction(Memory memory);
+        public string DoAction(Memory memory);
+    }
+    internal interface RActionLine : ActionLine
+    {
+        public Class ReturnType { get; }
     }
 
-    internal class Action : Compilable
+    internal class Action : ActionLine
     {
-        private Memory? Memory;
         private ActionLine[] Lines;
+        public readonly Class? ReturnType;
 
-        public Action(Memory? memory, params ActionLine[] lines)
+        public Action(params ActionLine[] lines)
         {
-            Memory = memory;
             if (lines.Length == 0)
                 throw new Exception("not enough lines");
             Lines = lines;
         }
 
-        public void Compile()
+        public string DoAction(Memory mem)
         {
-            Memory mem = new(Memory);
-
+            StreamWriter sw = Compiler.Instance.StreamWriter;
 
             if (Lines.Length == 1)
             {
-                Lines[0].DoAction(mem);
-                return;
+                return $"\t{Lines[0].DoAction(mem)}";
             }
 
-            StreamWriter sw = Compiler.Instance.StreamWriter;
-            sw.WriteLine("{");
-            foreach (var line in Lines)
-            {
-                line.DoAction(mem);
-            }
-            sw.WriteLine("}");
+            return $"{{{Environment.NewLine}{Lines.Select(l => $"\t{l.DoAction(mem)};{Environment.NewLine}")}{Environment.NewLine}}}";
         }
     }
 }

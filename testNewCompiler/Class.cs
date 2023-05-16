@@ -40,9 +40,9 @@ namespace RedRust
             return temp.DistinctBy((c) => c.Value.Name);
         }
 
-        public new Func GetFunc(string name)
+        public Func GetFunc(string name)
         {
-            Func? f = TryGetFunc($"{FullName}{FuncSep}{name}");
+            Func? f = TryGetFunc(this, name);
             if (f is null && Extends is not null)
                 f = Extends.GetFunc(name);
             if (f is null)
