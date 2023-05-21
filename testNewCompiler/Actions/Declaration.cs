@@ -6,14 +6,14 @@ using System.Threading.Tasks;
 
 namespace RedRust
 {
-    internal class Declaration : RActionLine
+    internal class Declaration : ActionLine
     {
         public readonly string Name;
-        public readonly Class Type;
-        public Class ReturnType => Type;
-        public readonly RActionLine? Value;
+        public readonly Type Type;
+        public Type ReturnType => Type;
+        public readonly ActionLine? Value;
 
-        public Declaration(string name, Class type, RActionLine? value)
+        public Declaration(string name, Type type, ActionLine? value)
         {
             Name = name;
             Type = type;
@@ -22,10 +22,11 @@ namespace RedRust
                 throw new NotImplementedException();
         }
 
-        public string DoAction(Memory mem)
+        public (string, Object?) DoAction(Memory mem)
         {
-            mem.AddVar(Name, Type);
-            return $"{Type.Name} {Name}{(Value is null ? "" : $" = {Value.DoAction(mem)}")};";
+            Object ob = new(Type);
+            mem.AddVar(Name, ob);
+            return new($"{Type.Name} {Name}{(Value is null ? "" : $" = {Value.DoAction(mem)}")};", ob);
         }
     }
 }

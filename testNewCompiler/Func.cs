@@ -31,10 +31,11 @@ namespace RedRust
         private bool compiled = false;
         public readonly Class? Of;
 
-        public readonly Dictionary<string, Class> Params = new();
+        public readonly IEnumerable<KeyValuePair<string, Type>> Params;
         public readonly Action Action;
+        public Type? ReturnType => Action.ReturnType;
 
-        public Func(string name, Class? of, Dictionary<string, Class> _params, Action action)
+        public Func(string name, Class? of, IEnumerable<KeyValuePair<string, Type>> _params, Action action)
             : base(CheckName(name), $"{FuncSep}{(of is null ? "" : $"{of.FullName}{FuncSep}")}{name}")
         {
             Of = of;
@@ -52,8 +53,8 @@ namespace RedRust
 
             StreamWriter sw = Compiler.Instance.StreamWriter;
 
-            sw.Write($"{(Action.ReturnType is null ? "void" : Action.ReturnType.Name)} {Name}({string.Join(',', Params.Select(l => $"{l.Value.Name} {l.Key}"))})");
-            sw.WriteLine(Action.DoAction(new Memory(null, Params)));
+            sw.Write($"{(ReturnType is null ? "void" : ReturnType.Name)} {Name}({string.Join(',', Params.Select(l => $"{l.Value.Name} {l.Key}"))})");
+            sw.WriteLine(Action.DoAction(new Memory(null, Params.ToDictionary(l => l.Key, l => new Object(l.Value)))));
         }
     }
 }
