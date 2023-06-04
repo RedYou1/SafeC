@@ -1,11 +1,25 @@
 ﻿namespace RedRust
 {
-	internal class Class : Definition
+	internal class Interface : Container
+	{
+		public readonly Generic? Generic;
+
+		public Interface(string name) : base(name, $"{InterfaceSep}{name}")
+		{
+			AddDef(FullName, this);
+		}
+
+		public override void Compile() { }
+	}
+
+
+	internal class Class : Container
 	{
 		private bool compiled = false;
 
 		public readonly Class? Extends;
 
+		public readonly Generic? Generic;
 
 		public Class(string name, Class? extends)
 			: base(name, $"{ClassSep}{(extends is null ? "" : $"{extends.FullName}{ClassSep}")}{name}")

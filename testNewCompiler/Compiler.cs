@@ -4,9 +4,12 @@
 	{
 		public readonly StreamWriter StreamWriter;
 
-		private Compiler(string file)
+		private Compiler(string inputPath, string outputPath)
 		{
-			StreamWriter = File.CreateText(file);
+			FileReader.ReadFile(inputPath);
+			StreamWriter = File.CreateText(outputPath);
+
+			Definition.GetFunc(null, "main").Compile();
 		}
 
 
@@ -21,13 +24,18 @@
 			}
 		}
 
-		public static Compiler GetInstance(string file)
+		public static Compiler CreateInstance(string inputPath, string outputPath)
 		{
 			if (instance is null)
-				instance = new(file);
+				instance = new(inputPath, outputPath);
 			else
 				throw new Exception();
 			return instance;
+		}
+
+		private static void Main()
+		{
+			CreateInstance(@"..\..\..\testRedRust\main.rr", @"..\..\..\testC\testC.c");
 		}
 	}
 }

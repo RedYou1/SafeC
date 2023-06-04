@@ -2,7 +2,7 @@
 {
 	internal class Type
 	{
-		public readonly Class Class;
+		public readonly Definition Def;
 
 		public readonly bool CanBeNull;
 
@@ -21,11 +21,11 @@
 
 		public bool Reference;
 
-		public string Name => $"{Class.Name}{(IsNull || Reference ? "*" : "")}";
+		public string Name => $"{Def.Name}{(IsNull || Reference ? "*" : "")}";
 
-		public Type(Class cls, bool reference, bool canBeNull, bool isNull)
+		public Type(Definition def, bool reference, bool canBeNull, bool isNull)
 		{
-			Class = cls;
+			Def = def;
 
 			Reference = reference;
 

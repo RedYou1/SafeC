@@ -26,17 +26,18 @@
 		public readonly Class? Of;
 
 		public readonly IEnumerable<KeyValuePair<string, Type>> Params;
-		public readonly Action Action;
-		public Type? ReturnType => Action.ReturnType;
+		public readonly Type? returnType;
+		public Action? Action = null;
+		public Type? ReturnType => returnType;
 
-		public Func(string name, Class? of, IEnumerable<KeyValuePair<string, Type>> _params, Action action)
+		public Func(string name, Class? of, IEnumerable<KeyValuePair<string, Type>> _params, Type? returnType)
 			: base(CheckName(name), $"{FuncSep}{(of is null ? "" : $"{of.FullName}{FuncSep}")}{name}")
 		{
 			Of = of;
 
 			AddDef(FullName, this);
 			Params = _params;
-			Action = action;
+			this.returnType = returnType;
 		}
 
 		public override void Compile()
