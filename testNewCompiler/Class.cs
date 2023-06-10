@@ -37,6 +37,16 @@
 			=> (Extends?.GetVars() ?? Enumerable.Empty<KeyValuePair<string, Definition>>())
 				.Concat(Definitions.Where((v) => v.Key.StartsWith($"{FullName}{VarSep}")));
 
+		public Definition GetVar(string name)
+		{
+			Definition? f = TryGetVar(this, name);
+			if (f is null && Extends is not null)
+				f = Extends.GetVar(name);
+			if (f is null)
+				throw new Exception("var doesnt exists");
+			return f;
+		}
+
 		public IEnumerable<KeyValuePair<string, Func>> GetFuncs()
 		{
 			var temp = Definitions.Where((v) => v.Key.StartsWith($"{FullName}{FuncSep}"))

@@ -30,6 +30,8 @@
 		public Action? Action = null;
 		public Type? ReturnType => returnType;
 
+		public readonly Memory Memory = new();
+
 		public Func(string name, Class? of, IEnumerable<KeyValuePair<string, Type>> _params, Type? returnType)
 			: base(CheckName(name), $"{FuncSep}{(of is null ? "" : $"{of.FullName}{FuncSep}")}{name}")
 		{
@@ -37,6 +39,8 @@
 
 			AddDef(FullName, this);
 			Params = _params;
+			foreach (var p in Params)
+				Memory.AddVar(name, new(p.Value));
 			this.returnType = returnType;
 		}
 

@@ -7,20 +7,30 @@
 		public Type ReturnType => Type;
 		public readonly ActionLine? Value;
 
+		public Declaration(Func of, string name, Type type, ActionLine? value)
+		{
+			Name = name;
+			Type = type;
+			Value = value;
+			if (Value is not null && of.ReturnType != type)//dyntype
+				throw new NotImplementedException();
+			DoAction(of.Memory);
+		}
+
 		public Declaration(string name, Type type, ActionLine? value)
 		{
 			Name = name;
 			Type = type;
 			Value = value;
-			if (Value is not null && Type != type)//dyntype
-				throw new NotImplementedException();
 		}
 
 		public (string, Object?) DoAction(Memory mem)
 		{
-			Object ob = new(Type);
-			mem.AddVar(Name, ob);
-			return new($"{Type.Name} {Name}{(Value is null ? "" : $" = {Value.DoAction(mem)}")};", ob);
+			(string, Object?) t = (string.Empty, null);
+			if (Value is not null)
+				t = Value.DoAction(mem);
+			mem.AddVar(Name, t.Item2);
+			return new($"{Type.Name} {Name}{(Value is null ? "" : $" = {t}")};", t.Item2);
 		}
 	}
 }

@@ -11,6 +11,8 @@ namespace RedRust
 		private const string StringPattern = "^\"[^\"\\n]*\"";
 		[StringSyntax(StringSyntaxAttribute.Regex)]
 		private const string NumberPattern = "^[0-9]+(\\.[0-9]+){0,1}";
+		[StringSyntax(StringSyntaxAttribute.Regex)]
+		private const string ReasignPattern = "^[a-zA-Z]{1}[a-zA-Z0-9]*(\\.[a-zA-Z]{1}[a-zA-Z0-9]*)*( = ((\"[^\"\\n]*\")|[^\"\\n])+){0,1}\\n";
 
 		public static void ReadFile(string inputPath)
 		{
@@ -62,11 +64,14 @@ namespace RedRust
 
 				content = content.Skip(c.Length).AsString();
 
-				return new Constant(new(c.Contains('.') ? Definition.GetClass("float") : Definition.GetClass("int"), false, false, false), c);
+				return new Constant(new(c.Contains('.') ? Definition.GetClass("f32") : Definition.GetClass("i32"), false, false, false), c);
 			}
 			if (PcreRegex.IsMatch(content, $"^{Definition.ClassNames}(\\((?&cl){{1}}(, (?&cl))*\\)){{0,1}}:\\n"))
 			{
 				string name = content.Split(':')[0].Split('(')[0];
+
+				if (Definition.DefsNameStartWith(name).Any(l => l is Class || l is Generic))
+					throw new Exception();
 
 				content = content.Skip(name.Length).AsString();
 
@@ -96,13 +101,26 @@ namespace RedRust
 
 				return t;
 			}
-			if (PcreRegex.IsMatch(content, $"^[a-zA-Z]{{1}}[a-zA-Z0-9]* {Definition.FuncNames}\\({Definition.FuncParams}\\):\\n"))
+			if (PcreRegex.IsMatch(content, $"^[a-zA-Z]{{1}}[a-zA-Z0-9]* {Definition.FuncNames}\\({Definition.FuncParams}\\):\\n") ||
+				(of is Class cof && PcreRegex.IsMatch(content, $"^{cof.Name}\\({Definition.FuncParams}\\):\\n")) ||
+				(of is Generic gof && PcreRegex.IsMatch(content, $"^{gof.Name}\\({Definition.FuncParams}\\):\\n")))
 			{
-				string[] returnAndName = content.Split("(")[0].Split(' ');
-				content = content.Skip(returnAndName.Length + 1).AsString();
+				string preParams = content.Split("(")[0];
+				content = content.Skip(preParams.Length + 1).AsString();
 
 				string temp = content.TakeWhile(c => c != ')').AsString();
 				content = content.Skip(temp.Length + 3).AsString();
+
+
+				string[] returnAndName;
+				if (preParams.Contains(' '))
+				{
+					returnAndName = preParams.Split(' ');
+					if (Definition.DefsNameStartWith(returnAndName[1]).Any(l => l is Func))
+						throw new Exception();
+				}
+				else
+					returnAndName = new string[] { ((Class)of!).Name, preParams };
 
 				bool returnNull = returnAndName[0].EndsWith("?");
 				if (returnNull)
@@ -111,7 +129,13 @@ namespace RedRust
 				if (of is not null && of is not Class)
 					throw new Exception();
 
-				Func f = new Func(returnAndName[1], of as Class, temp.Split(", ").Select(l =>
+				string[] param;
+				if (temp.Any())
+					param = temp.Split(", ");
+				else
+					param = Array.Empty<string>();
+
+				Func f = new Func(returnAndName[1], of as Class, param.Select(l =>
 				{
 					var t = l.Split(" ");
 					var type = t[1];
@@ -138,7 +162,7 @@ namespace RedRust
 				string c = content.TakeWhile(c => c != '\n').AsString();
 				content = content.Skip(c.Length).AsString();
 
-				ActionLine[] child = Array.Empty<ActionLine>();
+				ActionLine? child = null;
 				if (c.Contains(" = "))
 				{
 					content = content.Skip(" = ".Length).AsString();
@@ -148,7 +172,7 @@ namespace RedRust
 					object t = Analyse(tabs, ref temp[1], of);
 					if (t is not ActionLine a)
 						throw new Exception("not an action");
-					child = new ActionLine[] { a };
+					child = a;
 				}
 
 				string[] c2 = c.Split(' ');
@@ -161,7 +185,23 @@ namespace RedRust
 				if (isRef)
 					typeName = typeName.Skip("ref ".Length).AsString();
 
-				return new Declaration(c2[1], new(Definition.GetTypeDef(typeName), isRef, isNullable, isNullable && !child.Any()), null);
+				if (of is Func f)
+					return new Declaration(f, c2[1], new(Definition.GetTypeDef(typeName), isRef, isNullable, isNullable && (child is null || child.ReturnType is null || child.ReturnType.IsNull)), child);
+				else
+					return new Declaration(c2[1], new(Definition.GetTypeDef(typeName), isRef, isNullable, isNullable && (child is null || child.ReturnType is null || child.ReturnType.IsNull)), child);
+			}
+			if (of is Func func && PcreRegex.IsMatch(content, ReasignPattern))
+			{
+				string c = content.TakeWhile(c => c != '\n').AsString();
+				content = content.Skip(c.Length).AsString();
+
+				string[] temp = c.Split(" = ");
+				c = temp[0];
+				object t = Analyse(tabs, ref temp[1], of);
+				if (t is not ActionLine child)
+					throw new Exception("not an action");
+
+				return new Reasign(func, c, child);
 			}
 			throw new Exception("not found");
 		}

@@ -47,13 +47,16 @@ namespace RedRust
 		[StringSyntax(StringSyntaxAttribute.Regex)]
 		public const string FuncParams = $"((?'prm'((ref )|(own )|(cp )){{1}}{ClassNames}\\?{{0,1}} [a-zA-Z]{{1}}[a-zA-Z0-9]*)(, (?&prm))*){{0,1}}";
 
-		public static Dictionary<string, Definition> Definitions = new();
+		public static readonly Dictionary<string, Definition> Definitions = new();
 
 		public static void AddDef(string name, Definition def)
 		{
 			if (!Definitions.TryAdd(name, def))
 				throw new Exception("duplicate name");
 		}
+
+		public static IEnumerable<Definition> DefsNameStartWith(string name)
+			=> Definitions.Values.Where(l => l.FullName.StartsWith(name));
 
 		public static Definition GetTypeDef(string name)
 		{
@@ -81,6 +84,20 @@ namespace RedRust
 			if (def is not Class c)
 				throw new Exception("def is not class");
 			return c;
+		}
+
+		public static Definition? TryGetVar(Class? of, string name)
+		{
+			if (!Definitions.TryGetValue($"{(of is null ? "" : $"{ClassSep}{of.FullName}")}{VarSep}{name}", out var def) || def is null)
+				return null;
+			return def;
+		}
+
+		public static Definition GetVar(Class? of, string name)
+		{
+			if (!Definitions.TryGetValue($"{(of is null ? "" : $"{ClassSep}{of.FullName}")}{VarSep}{name}", out var def) || def is null)
+				throw new Exception("class name not found");
+			return def;
 		}
 
 		public static Func? TryGetFunc(Class? of, string name)
@@ -117,6 +134,7 @@ namespace RedRust
 		static Definition()
 		{
 			new Integer();
+			new Float();
 		}
 	}
 
@@ -124,6 +142,14 @@ namespace RedRust
 	{
 		internal Integer()
 			: base("i32", null) { }
+
+		public override void Compile() { }
+	}
+
+	internal class Float : Class
+	{
+		internal Float()
+			: base("f32", null) { }
 
 		public override void Compile() { }
 	}

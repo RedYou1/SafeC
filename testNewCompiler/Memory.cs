@@ -52,10 +52,10 @@
 	internal class Memory
 	{
 		private Memory? Extends;
-		private Dictionary<string, Object> Instances;
+		private Dictionary<string, Object?> Instances;
 
 
-		public Memory(Memory? memory, Dictionary<string, Object>? instances)
+		public Memory(Memory? memory = null, Dictionary<string, Object?>? instances = null)
 		{
 			Extends = memory;
 			Instances = instances ?? new();
@@ -68,11 +68,30 @@
 			return Instances.ContainsKey(name);
 		}
 
-		public void AddVar(string name, Object var)
+		public void AddVar(string name, Object? var)
 		{
 			if (Contains(name))
 				throw new Exception("name already used");
 			Instances.Add(name, var);
+		}
+
+		public Object? GetVar(string name)
+		{
+			if (Instances.TryGetValue(name, out Object? obj))
+				return obj;
+			if (Extends is not null)
+				return Extends.GetVar(name);
+			throw new Exception();
+		}
+
+		public void SetVar(string name, Object obj)
+		{
+			if (Instances.ContainsKey(name))
+				Instances[name] = obj;
+			else if (Extends is not null)
+				Extends.SetVar(name, obj);
+			else
+				throw new Exception();
 		}
 	}
 }
