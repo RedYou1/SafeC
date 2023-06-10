@@ -1,4 +1,6 @@
-﻿using RedRust;
+﻿using PCRE;
+using RedRust;
+using System.Diagnostics.CodeAnalysis;
 
 Global Global = new();
 Utilities Utilities = new(Global);
@@ -19,10 +21,6 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
 	if (constructor && className is null)
 		throw new Exception("className is null while constructor being at true");
 	string declaration = enumarator.Current.Substring(tabs.Length);
-	if (declaration.StartsWith("fn "))
-	{
-		declaration = declaration.Substring(3);
-	}
 
 	RedRust.Type returnType;
 	string name;
@@ -55,7 +53,7 @@ Function ParseFunc(bool constructor, string tabs, Class? className, IEnumerator<
 	List<Variable> paramameters = new();
 	List<Includable> includes = new();
 
-	string[] stringparams = declaration.Split(",");
+	string[] stringparams = declaration.Split(", ");
 	if (string.IsNullOrWhiteSpace(declaration))
 		stringparams = new string[0];
 	if (!constructor && className is not null)
@@ -144,7 +142,7 @@ bool ReadBlock(string name, RedRust.Type returnType, bool constructor, string ta
 			break;
 		string line = enumarator.Current.Substring(tabs.Length + 1);
 
-		if (line.Contains(" = "))// type name = ...;
+		if (PcreRegex.IsMatch(line, "^&{0,1}((dyn )|(typedyn )){0,1}&{0,1}(?'cl'[a-zA-Z]{1}[a-zA-Z0-9]*(<(?&cl)(, (?&cl))*>){0,1})\\?{0,1} [a-zA-Z]{1}[a-zA-Z0-9]* = "))
 		{
 			var equal = line.Split(" = ");
 			var firstSplit = equal[0].Split(" ");
@@ -540,9 +538,9 @@ IEnumerable<Token> Interpret(string pathin)
 			break;
 		if (string.IsNullOrWhiteSpace(enumarator.Current))
 			continue;
-		if (enumarator.Current.StartsWith("class "))
+		if (PcreRegex.IsMatch(enumarator.Current, "^(?'cl'[a-zA-Z]{1}[a-zA-Z0-9]*(<(?&cl)(, (?&cl))*>){0,1})(\\((?&cl){1}(, (?&cl))*\\)){0,1}:$"))
 		{
-			string name = string.Join(string.Empty, enumarator.Current.Skip(6).SkipLast(1));
+			string name = string.Join(string.Empty, enumarator.Current.SkipLast(1));
 			Class? extend = null;
 			if (name.Contains("("))
 			{
@@ -643,14 +641,14 @@ IEnumerable<Token> Interpret(string pathin)
 			yield return c;
 			continue;
 		}
-		else if (enumarator.Current.StartsWith("fn "))
+		else if (PcreRegex.IsMatch(enumarator.Current, "^[a-zA-Z]{1}[a-zA-Z0-9]* (?'fn'[a-zA-Z]{1}[a-zA-Z0-9]*(<(?&fn)(, (?&fn))*>){0,1})\\(((?'prm'&{0,1}((dyn )|(typedyn )){0,1}&{0,1}(?'cl'[a-zA-Z]{1}[a-zA-Z0-9]*(<(?&cl)(, (?&cl))*>){0,1})\\?{0,1} [a-zA-Z]{1}[a-zA-Z0-9]*)(, (?&prm))*){0,1}\\):$"))
 		{
 			var func = ParseFunc(false, string.Empty, null, enumarator);
 			Global.globalFunction.Add(func);
 			yield return func;
 			continue;
 		}
-		canmove = enumarator.MoveNext();
+		throw new Exception();
 	}
 }
 

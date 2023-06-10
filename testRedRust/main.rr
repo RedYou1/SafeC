@@ -1,4 +1,4 @@
-class A:
+A:
 	i32 a
 
 	A():
@@ -10,10 +10,10 @@ class A:
 	void Add(&dyn this):
 		this.a = this.a + 1
 
-	void Add(&dyn this,i32 b):
+	void Add(&dyn this, i32 b):
 		this.a = this.a + b
 
-class B:
+B:
 	string b
 
 	B():
@@ -27,7 +27,7 @@ class B:
 			print(this.b)
 		print("}\n")
 
-class C(A):
+C(A):
 	str id
 	B b
 
@@ -36,7 +36,7 @@ class C(A):
 		this.id = id
 		this.b = new B()
 
-	C(i32 a,str id):
+	C(i32 a, str id):
 		base(a)
 		this.id = id
 		this.b = new B()
@@ -44,16 +44,16 @@ class C(A):
 	void Add(&dyn this):
 		this.a = this.a + 2
 
-fn B createB():
+B createB():
 	B b = new B()
 	return b
 
-fn C createC(i32? a,str id):
+C createC(i32? a, str id):
 	if a is not null:
-		return new C(a,id)
+		return new C(a, id)
 	return new C(id)
 
-fn void Add(&typedyn A a):
+void Add(&typedyn A a):
 	a.Add()
 	if a is C c:
 		B b = c.b
@@ -62,18 +62,18 @@ fn void Add(&typedyn A a):
 	if a is not C:
 		print("add is not type C\n")
 
-fn void TakeOwner(A a):
+void TakeOwner(A a):
 	print(a.a)
 	print("\n")
 
-fn i32 main():
+i32 main():
 	A aa = new A()
 	print(aa.a)
 	print("\n")
 	Add(aa)
 	TakeOwner(aa)
 
-	C a = createC(null,"ID")
+	C a = createC(null, "ID")
 	print(a.id)
 	print(":\n")
 	print(a.a)
@@ -82,8 +82,8 @@ fn i32 main():
 	print(a.a)
 	print("\n")
 	
-	a = createC(5,"ID2")
-	a = createC(6,"ID2,1")
+	a = createC(5, "ID2")
+	a = createC(6, "ID2,1")
 	print(a.id)
 	print(":\n")
 	print(a.a)

@@ -15,4 +15,8 @@
 		<DebugType>none</DebugType>
 	</PropertyGroup>
 
+	<ItemGroup>
+	  <PackageReference Include="PCRE.NET" Version="0.20.0" />
+	</ItemGroup>
+
 </Project>
