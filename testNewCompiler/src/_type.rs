@@ -1,7 +1,7 @@
 use crate::class::Class;
 
-pub struct Type<'a> {
-    pub of: &'a Class<'a>,
+pub struct Type {
+    pub of: &'static Class<'static>,
     pub own: bool,
     pub is_ref: bool,
     pub nullable: bool,
@@ -9,7 +9,7 @@ pub struct Type<'a> {
     pub can_call_func: bool,
 }
 
-impl<'a> Type<'a> {
+impl Type {
     pub fn name(&self) -> String {
         return format!("{}", self.of.name);
     }

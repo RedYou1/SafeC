@@ -3,7 +3,9 @@ use std::collections::HashMap;
 
 pub struct Class<'a> {
     pub name: &'a str,
-    pub variables: HashMap<&'a str, Type<'a>>,
+    pub variables: HashMap<&'static str, Type>,
+    pub extends: Option<&'static Class<'static>>,
+    pub implements: Vec<&'static Class<'static>>,
 }
 
 impl<'a> Class<'a> {
