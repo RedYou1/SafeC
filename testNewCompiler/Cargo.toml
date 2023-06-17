@@ -4,4 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-regex = "1.8.4"
+pcre2 = "0.2.3"
