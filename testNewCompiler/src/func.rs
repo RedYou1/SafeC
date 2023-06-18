@@ -1,7 +1,7 @@
-use crate::class::Class;
+use crate::_type::Type;
 
-pub struct Func<'a> {
-    pub name: &'a str,
-    pub return_type: Option<&'static Class<'static>>,
-    pub params: Vec<(&'static Class<'static>, &'static str)>,
+pub struct Func {
+    pub name: String,
+    pub return_type: Option<Type>,
+    pub params: Vec<(Type, String)>,
 }

@@ -1,7 +1,7 @@
 use crate::class::Class;
 
 pub struct Type {
-    pub of: &'static Class<'static>,
+    pub of: &'static Class,
     pub own: bool,
     pub is_ref: bool,
     pub nullable: bool,

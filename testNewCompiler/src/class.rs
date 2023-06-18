@@ -1,14 +1,14 @@
 use crate::_type::Type;
 use std::collections::HashMap;
 
-pub struct Class<'a> {
-    pub name: &'a str,
-    pub variables: HashMap<&'static str, Type>,
-    pub extends: Option<&'static Class<'static>>,
-    pub implements: Vec<&'static Class<'static>>,
+pub struct Class {
+    pub name: String,
+    pub variables: HashMap<String, Type>,
+    pub extends: Option<&'static Class>,
+    pub implements: Vec<&'static Class>,
 }
 
-impl<'a> Class<'a> {
+impl Class {
     pub fn compile(&self) -> String {
         return format!(
             "typedef struct {} {{\n{}\n}}{};",

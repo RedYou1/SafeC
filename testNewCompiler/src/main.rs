@@ -6,9 +6,12 @@ mod logger;
 mod my_file_reader;
 mod object;
 
+use _type::Type;
+use const_format::formatcp;
+use memory_stats::memory_stats;
+use once_cell::sync::Lazy;
 use pcre2::bytes::Captures;
 use pcre2::bytes::Regex;
-use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Error, Write};
@@ -20,54 +23,96 @@ use logger::debug_all_capture;
 use logger::log;
 use logger::logln;
 #[allow(unused)]
-use logger::LogLevel::ALARM;
-#[allow(unused)]
-use logger::LogLevel::DEBUG;
-#[allow(unused)]
-use logger::LogLevel::INFO;
-#[allow(unused)]
-use logger::LogLevel::WARNING;
+use logger::LogLevel::{ALARM, DEBUG, INFO, WARNING, XDEBUG};
 use my_file_reader::FileReader;
 
-static mut STRINGS: Vec<String> = vec![];
-static mut ALLCLASS: Vec<Class<'static>> = vec![];
-static mut ALLFUNC: Vec<Func<'static>> = vec![];
-
-fn add_class<'a>(c: Class<'a>) -> &'static Class<'static> {
-    unsafe {
-        let i = ALLCLASS.len();
-        let i2 = STRINGS.len();
-        STRINGS.push(String::from(c.name));
-        ALLCLASS.push(Class {
-            name: &STRINGS[i2],
-            variables: c.variables,
-            extends: c.extends,
-            implements: c.implements,
-        });
-        return &ALLCLASS[i];
+fn getmem() {
+    if let Some(usage) = memory_stats() {
+        logln(
+            format!("Current physical memory usage: {}", usage.physical_mem),
+            XDEBUG,
+        );
+        logln(
+            format!("Current virtual memory usage: {}", usage.virtual_mem),
+            XDEBUG,
+        );
+    } else {
+        logln(
+            String::from("Couldn't get the current memory usage :("),
+            XDEBUG,
+        );
     }
 }
 
-fn add_func<'a>(c: Func<'a>) -> &'static Func<'static> {
+static mut CLASSES: Lazy<HashMap<String, Class>> = Lazy::new(|| HashMap::new());
+static mut FUNCS: Lazy<HashMap<String, Func>> = Lazy::new(|| HashMap::new());
+
+fn add_class<'a>(c: Class) {
     unsafe {
-        let i = ALLFUNC.len();
-        let i2 = STRINGS.len();
-        STRINGS.push(String::from(c.name));
-        ALLFUNC.push(Func {
-            name: &STRINGS[i2],
-            return_type: c.return_type,
-            params: c.params,
-        });
-        return &ALLFUNC[i];
+        CLASSES.insert(c.name.to_string(), c);
     }
 }
 
-fn class_declaration(
-    lines: &mut FileReader,
-    classes: &mut RefCell<HashMap<&'static str, &'static Class<'static>>>,
-    funcs: &mut RefCell<HashMap<&'static str, &'static Func<'static>>>,
-    c: Captures,
-) {
+fn add_class2<'a>(cname: &'static str, c: Class) {
+    unsafe {
+        CLASSES.insert(cname.to_string(), c);
+    }
+}
+
+fn add_func<'a>(c: Func) {
+    unsafe {
+        FUNCS.insert(c.name.to_string(), c);
+    }
+}
+
+fn add_func2<'a>(cname: &'static str, c: Func) {
+    unsafe {
+        FUNCS.insert(cname.to_string(), c);
+    }
+}
+
+fn get_class<'a, 'b>(c: &'a str) -> Option<&'b Class> {
+    unsafe {
+        return CLASSES.get(c);
+    }
+}
+fn get_func<'a, 'b>(c: &'a str) -> Option<&'b Func> {
+    unsafe {
+        return FUNCS.get(c);
+    }
+}
+
+fn get_type<'a>(name: String) -> Type {
+    let mut c = name.chars();
+    let is_null = name.ends_with('?');
+    if is_null {
+        c.next_back();
+    }
+    let is_not_own = name.starts_with('*');
+    let is_ref = is_not_own || name.starts_with('&');
+
+    if is_ref {
+        c.next();
+    }
+
+    let t = get_class(c.as_str());
+    if t.is_none() {
+        panic!("type {} not found", c.as_str());
+    }
+
+    return Type {
+        of: t.unwrap(),
+        own: !is_not_own,
+        is_ref: is_ref,
+        nullable: is_null,
+        can_be_children: false,
+        can_call_func: true,
+    };
+}
+
+fn class_declaration(lines: &mut FileReader, c: Captures) {
+    logln(String::from("entering class_declaration"), XDEBUG);
+
     lines.next();
     while lines.current.is_some() {
         let line = lines.current.as_deref().unwrap();
@@ -81,6 +126,11 @@ fn class_declaration(
         lines.next();
     }
 
+    logln(
+        String::from("finished reading content of the class"),
+        XDEBUG,
+    );
+
     let name = c.get_str(2).unwrap();
     let mut extends: Option<&Class> = None;
     let mut implements: Vec<&Class> = vec![];
@@ -88,21 +138,20 @@ fn class_declaration(
     log(format!("class {}", name), INFO);
     let m = c.get_str(7);
     if m.is_some() {
-        let t = m.unwrap();
-        let m: Vec<&str> = t.split(", ").collect();
+        let includes: Vec<&str> = m.unwrap().split(", ").collect();
 
-        match classes.get_mut().get(m[0]) {
+        match get_class(includes[0]) {
             Some(l) => extends = Some(l),
             None => panic!("extends of class {} not found", name),
         }
 
         log(format!(" extends {}", extends.unwrap().name), INFO);
 
-        if m.len() > 1 {
+        if includes.len() > 1 {
             log(format!(" implements "), INFO);
-            implements = Vec::with_capacity(m.len() - 1);
-            for i in 1..m.len() {
-                let t = classes.get_mut().get(m[i]);
+            implements = Vec::with_capacity(includes.len() - 1);
+            for i in 1..includes.len() {
+                let t = get_class(includes[i]);
                 if extends.is_none() {
                     panic!("implements of class {} not found", name);
                 }
@@ -112,26 +161,19 @@ fn class_declaration(
         }
     }
 
-    let class = add_class(Class {
-        name: name.as_str(),
+    add_class(Class {
+        name: name.to_string(),
         variables: HashMap::new(),
         extends: extends,
         implements: implements,
     });
 
-    classes.get_mut().insert(class.name, class);
-
     logln(String::new(), INFO);
-
-    debug_all_capture(c);
 }
 
-fn fn_declaration(
-    lines: &mut FileReader,
-    classes: &mut RefCell<HashMap<&'static str, &'static Class<'static>>>,
-    funcs: &mut RefCell<HashMap<&'static str, &'static Func<'static>>>,
-    c: Captures,
-) {
+fn fn_declaration(lines: &mut FileReader, c: Captures) {
+    logln(String::from("entering fn_declaration"), XDEBUG);
+
     lines.next();
     while lines.current.is_some() {
         let line = lines.current.as_deref().unwrap();
@@ -145,96 +187,90 @@ fn fn_declaration(
         lines.next();
     }
 
-    let name = c.get_str(6).unwrap();
+    logln(String::from("finished reading content of the func"), XDEBUG);
+
+    let name = c.get_str(8).unwrap();
 
     let return_type_name = c.get_str(1).unwrap();
-    let mut return_type: Option<&'static Class<'static>> = None;
+    let mut return_type: Option<Type> = None;
     if return_type_name != "void" {
-        return_type = classes.get_mut().get(return_type_name.as_str()).copied();
-        if return_type.is_none() {
-            panic!("return type of func {} not found", name);
-        }
+        return_type = Some(get_type(String::from(return_type_name)));
     }
 
-    let mut params: Vec<(&Class, &str)> = vec![];
+    let mut params: Vec<(Type, String)> = vec![];
 
     log(format!("fn {} {}(", return_type_name, name), INFO);
 
-    let m = c.get_str(7);
-    if m.is_some() {
-        for p in m.unwrap().as_str().split(", ") {
+    let m = c.get_str(9).unwrap();
+    if !m.is_empty() {
+        for p in m.split(", ") {
             let param: Vec<&str> = p.trim().split(' ').collect();
-            let t = classes.get_mut().get(param[0]);
-            if t.is_none() {
-                panic!("parameter of func {} not found", name);
-            }
-            let pname;
-            unsafe {
-                let i = STRINGS.len();
-                STRINGS.push(String::from(param[1]));
-                pname = STRINGS[i].as_str();
-            }
-            params.push((t.unwrap(), pname));
-            log(format!("{} {}, ", param[0], pname), INFO);
+            params.push((get_type(String::from(param[0])), String::from(param[1])));
+            log(format!("{} {}, ", param[0], param[1]), INFO);
         }
     }
 
-    let func = add_func(Func {
-        name: name.as_str(),
-        return_type,
+    add_func(Func {
+        name: name.to_string(),
+        return_type: return_type,
         params: params,
     });
 
-    funcs.get_mut().insert(func.name, func);
-
     logln(format!(")"), INFO);
-
-    debug_all_capture(c);
 }
 
+const NAMEREGEX: &str = r"(?'nm'[a-zA-Z]{1}[a-zA-Z0-9]*)";
+const DEFNAMEREGEX: &str = formatcp!(r"(?'cl'{NAMEREGEX}(<((?&cl)(, (?&cl))*)>){{0,1}})");
+const CLASSDEFREGEX: &str = formatcp!(r"^{DEFNAMEREGEX}(\(((?&cl)(, (?&cl))*)\)){{0,1}}:$");
+const TYPEREGEX: &str = formatcp!(r"(?'tp'(\*|\&){{0,1}}{DEFNAMEREGEX}\?{{0,1}})");
+const FUNCDEFREGEX: &str =
+    formatcp!(r"^{TYPEREGEX} ((?&cl))\((((?&tp) (?&nm)(, (?&tp) (?&nm))*){{0,1}})\):$");
+
 fn main() -> Result<(), Error> {
-    let mut classes: RefCell<HashMap<&str, &Class<'_>>> = RefCell::from(HashMap::from([
-        (
-            "i32",
-            add_class(Class {
-                name: "int",
-                variables: HashMap::new(),
-                extends: None,
-                implements: vec![],
-            }),
-        ),
-        (
-            "f32",
-            add_class(Class {
-                name: "float",
-                variables: HashMap::new(),
-                extends: None,
-                implements: vec![],
-            }),
-        ),
-    ]));
-    let mut funcs: RefCell<HashMap<&str, &Func<'_>>> = RefCell::from(HashMap::new());
+    add_class2(
+        "i32",
+        Class {
+            name: "int".to_string(),
+            variables: HashMap::new(),
+            extends: None,
+            implements: vec![],
+        },
+    );
+    add_class2(
+        "f32",
+        Class {
+            name: "float".to_string(),
+            variables: HashMap::new(),
+            extends: None,
+            implements: vec![],
+        },
+    );
+    add_class2(
+        "str",
+        Class {
+            name: "char*".to_string(),
+            variables: HashMap::new(),
+            extends: None,
+            implements: vec![],
+        },
+    );
 
-    let mut tokens: HashMap<
-        &str,
-        &dyn Fn(
-            &mut FileReader,
-            &mut RefCell<HashMap<&'static str, &'static Class<'static>>>,
-            &mut RefCell<HashMap<&'static str, &'static Func<'static>>>,
-            Captures<'_>,
-        ),
-    > = HashMap::new();
+    let mut tokens: HashMap<&str, &dyn Fn(&mut FileReader, Captures<'_>)> = HashMap::new();
 
-    tokens.insert(r"^(?'cl'([a-zA-Z]{1}[a-zA-Z0-9]*)(<((?&cl)(, (?&cl))*)>){0,1})(\(((?&cl)(, (?&cl))*)\)){0,1}:$", &class_declaration);
-    tokens.insert(r"^(?'cl'([a-zA-Z]{1}[a-zA-Z0-9]*)(<((?&cl)(, (?&cl))*)>){0,1}) ([a-zA-Z]{1}[a-zA-Z0-9]*)\(((?&cl) [a-zA-Z]{1}[a-zA-Z0-9]*(, (?&cl) [a-zA-Z]{1}[a-zA-Z0-9]*)*){0,1}\):$", &fn_declaration);
+    tokens.insert(CLASSDEFREGEX, &class_declaration);
+    tokens.insert(FUNCDEFREGEX, &fn_declaration);
 
     let mut lines = FileReader::new("..\\testRedRust\\main.rr").unwrap();
 
+    getmem();
+
     while lines.current.as_deref().is_some() {
         let line = String::from(lines.current.as_deref().unwrap());
+        logln(format!("Begening test line {}", line.as_str()), DEBUG);
         let mut captured = tokens
             .iter()
             .map(|i| {
+                logln(format!("test regex {}", i.0), XDEBUG);
                 (
                     Regex::new(i.0).unwrap().captures(line.as_bytes()).unwrap(),
                     i.1,
@@ -248,7 +284,10 @@ fn main() -> Result<(), Error> {
             ));
         }
         let i = captured.next().unwrap();
-        i.1(&mut lines, &mut classes, &mut funcs, i.0.unwrap());
+        let c = i.0.unwrap();
+        debug_all_capture(&c);
+        i.1(&mut lines, c);
+        getmem();
     }
 
     let mut output = File::create("..\\testC\\testC.c")?;
