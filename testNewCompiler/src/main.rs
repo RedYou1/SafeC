@@ -1,12 +1,14 @@
 mod _type;
 mod captures_utils;
 mod class;
+mod compilable;
 mod func;
 mod logger;
 mod my_file_reader;
 mod object;
 
 use _type::Type;
+use compilable::OUTPUT;
 use const_format::formatcp;
 use memory_stats::memory_stats;
 use once_cell::sync::Lazy;
@@ -14,10 +16,11 @@ use pcre2::bytes::Captures;
 use pcre2::bytes::Regex;
 use std::collections::HashMap;
 use std::fs::File;
-use std::io::{Error, Write};
+use std::io::Error;
 
 use captures_utils::CapturesGetStr;
 use class::Class;
+use compilable::Compilable;
 use func::Func;
 use logger::debug_all_capture;
 use logger::log;
@@ -76,28 +79,51 @@ fn get_class<'a, 'b>(c: &'a str) -> Option<&'b Class> {
         return CLASSES.get(c);
     }
 }
+fn get_class_mut<'a, 'b>(c: &'a str) -> Option<&'b mut Class> {
+    unsafe {
+        return CLASSES.get_mut(c);
+    }
+}
 fn get_func<'a, 'b>(c: &'a str) -> Option<&'b Func> {
     unsafe {
         return FUNCS.get(c);
     }
 }
+fn get_func_mut<'a, 'b>(c: &'a str) -> Option<&'b mut Func> {
+    unsafe {
+        return FUNCS.get_mut(c);
+    }
+}
 
 fn get_type<'a>(name: String) -> Type {
     let mut c = name.chars();
-    let is_null = name.ends_with('?');
+    let is_null = c.as_str().ends_with('?');
     if is_null {
         c.next_back();
     }
-    let is_not_own = name.starts_with('*');
-    let is_ref = is_not_own || name.starts_with('&');
+    let is_not_own = c.as_str().starts_with('*');
+    let is_ref = is_not_own || c.as_str().starts_with('&');
 
     if is_ref {
         c.next();
     }
 
-    let t = get_class(c.as_str());
+    let typedyn = c.as_str().starts_with("typedyn ");
+    if typedyn {
+        for _ in "typedyn ".chars() {
+            c.next();
+        }
+    }
+    let _dyn = c.as_str().starts_with("dyn ");
+    if _dyn {
+        for _ in "dyn ".chars() {
+            c.next();
+        }
+    }
+
+    let t = get_class_mut(c.as_str());
     if t.is_none() {
-        panic!("type {} not found", c.as_str());
+        panic!("type \"{}\" not found", c.as_str());
     }
 
     return Type {
@@ -105,8 +131,8 @@ fn get_type<'a>(name: String) -> Type {
         own: !is_not_own,
         is_ref: is_ref,
         nullable: is_null,
-        can_be_children: false,
-        can_call_func: true,
+        can_be_children: typedyn || _dyn,
+        can_call_func: !_dyn,
     };
 }
 
@@ -132,36 +158,43 @@ fn class_declaration(lines: &mut FileReader, c: Captures) {
     );
 
     let name = c.get_str(2).unwrap();
-    let mut extends: Option<&Class> = None;
-    let mut implements: Vec<&Class> = vec![];
+    let mut extends: Option<&mut Class> = None;
+    let mut implements: Vec<&mut Class> = vec![];
 
     log(format!("class {}", name), INFO);
     let m = c.get_str(7);
     if m.is_some() {
         let includes: Vec<&str> = m.unwrap().split(", ").collect();
 
-        match get_class(includes[0]) {
+        match get_class_mut(includes[0]) {
             Some(l) => extends = Some(l),
             None => panic!("extends of class {} not found", name),
         }
 
-        log(format!(" extends {}", extends.unwrap().name), INFO);
+        log(
+            format!(" extends {}", extends.as_mut().unwrap().name.as_str()),
+            INFO,
+        );
 
         if includes.len() > 1 {
             log(format!(" implements "), INFO);
             implements = Vec::with_capacity(includes.len() - 1);
             for i in 1..includes.len() {
-                let t = get_class(includes[i]);
-                if extends.is_none() {
+                let t = get_class_mut(includes[i]);
+                if t.is_none() {
                     panic!("implements of class {} not found", name);
                 }
-                implements.push(t.unwrap());
-                log(format!("{}, ", t.unwrap().name), INFO);
+                let r = t.unwrap();
+                log(format!("{}, ", r.name.as_str()), INFO);
+                implements.push(r);
             }
         }
     }
 
     add_class(Class {
+        included: false,
+        to_include: vec![],
+
         name: name.to_string(),
         variables: HashMap::new(),
         extends: extends,
@@ -189,7 +222,7 @@ fn fn_declaration(lines: &mut FileReader, c: Captures) {
 
     logln(String::from("finished reading content of the func"), XDEBUG);
 
-    let name = c.get_str(8).unwrap();
+    let name = c.get_str(12).unwrap();
 
     let return_type_name = c.get_str(1).unwrap();
     let mut return_type: Option<Type> = None;
@@ -201,16 +234,22 @@ fn fn_declaration(lines: &mut FileReader, c: Captures) {
 
     log(format!("fn {} {}(", return_type_name, name), INFO);
 
-    let m = c.get_str(9).unwrap();
+    let m = c.get_str(13).unwrap();
     if !m.is_empty() {
-        for p in m.split(", ") {
-            let param: Vec<&str> = p.trim().split(' ').collect();
-            params.push((get_type(String::from(param[0])), String::from(param[1])));
+        for temp in m.split(", ") {
+            let p = temp.trim();
+            let param: Vec<&str> = p.split(' ').collect();
+            let pname = param.last().unwrap();
+            let typestr = &p[0..p.len() - pname.len() - 1];
+            params.push((get_type(String::from(typestr)), String::from(*pname)));
             log(format!("{} {}, ", param[0], param[1]), INFO);
         }
     }
 
     add_func(Func {
+        included: false,
+        to_include: vec![],
+
         name: name.to_string(),
         return_type: return_type,
         params: params,
@@ -222,7 +261,9 @@ fn fn_declaration(lines: &mut FileReader, c: Captures) {
 const NAMEREGEX: &str = r"(?'nm'[a-zA-Z]{1}[a-zA-Z0-9]*)";
 const DEFNAMEREGEX: &str = formatcp!(r"(?'cl'{NAMEREGEX}(<((?&cl)(, (?&cl))*)>){{0,1}})");
 const CLASSDEFREGEX: &str = formatcp!(r"^{DEFNAMEREGEX}(\(((?&cl)(, (?&cl))*)\)){{0,1}}:$");
-const TYPEREGEX: &str = formatcp!(r"(?'tp'(\*|\&){{0,1}}{DEFNAMEREGEX}\?{{0,1}})");
+const TYPEREGEX: &str = formatcp!(
+    r"(?'tp'(\*|\&|(\*dyn )|(\&dyn )|(\*typedyn )|(\&typedyn )){{0,1}}{DEFNAMEREGEX}\?{{0,1}})"
+);
 const FUNCDEFREGEX: &str =
     formatcp!(r"^{TYPEREGEX} ((?&cl))\((((?&tp) (?&nm)(, (?&tp) (?&nm))*){{0,1}})\):$");
 
@@ -230,6 +271,9 @@ fn main() -> Result<(), Error> {
     add_class2(
         "i32",
         Class {
+            included: true,
+            to_include: vec![],
+
             name: "int".to_string(),
             variables: HashMap::new(),
             extends: None,
@@ -239,6 +283,9 @@ fn main() -> Result<(), Error> {
     add_class2(
         "f32",
         Class {
+            included: true,
+            to_include: vec![],
+
             name: "float".to_string(),
             variables: HashMap::new(),
             extends: None,
@@ -248,6 +295,9 @@ fn main() -> Result<(), Error> {
     add_class2(
         "str",
         Class {
+            included: true,
+            to_include: vec![],
+
             name: "char*".to_string(),
             variables: HashMap::new(),
             extends: None,
@@ -290,8 +340,12 @@ fn main() -> Result<(), Error> {
         getmem();
     }
 
-    let mut output = File::create("..\\testC\\testC.c")?;
-    write!(output, "...")?;
+    unsafe {
+        let mut temp = File::create("..\\testC\\testC.c")?;
+        OUTPUT = Some(&mut temp as *mut File);
+        get_class_mut("C").unwrap().compile()?;
+        get_func_mut("main").unwrap().compile()?;
+    }
 
     Ok(())
 }

@@ -1,7 +1,7 @@
-use crate::class::Class;
+use crate::{class::Class, compilable::Compilable};
 
 pub struct Type {
-    pub of: &'static Class,
+    pub of: &'static mut Class,
     pub own: bool,
     pub is_ref: bool,
     pub nullable: bool,
@@ -10,7 +10,16 @@ pub struct Type {
 }
 
 impl Type {
-    pub fn name(&self) -> String {
-        return format!("{}", self.of.name);
+    pub unsafe fn compile(&mut self) -> String {
+        if self.of.compile().is_err() {
+            panic!("class compile error");
+        }
+
+        return format!(
+            "{}{}{}",
+            if self.is_ref { "*" } else { "" },
+            self.of.name,
+            if self.nullable { "?" } else { "" }
+        );
     }
 }
