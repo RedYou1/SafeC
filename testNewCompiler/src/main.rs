@@ -6,6 +6,7 @@ mod func;
 mod logger;
 mod my_file_reader;
 mod object;
+mod writable;
 
 use _type::Type;
 use compilable::OUTPUT;
@@ -284,6 +285,7 @@ fn fn_declaration(
         name: name.to_string(),
         return_type: return_type,
         params: params,
+        action: "".to_string(),
     });
 
     logln(format!(")"), INFO);

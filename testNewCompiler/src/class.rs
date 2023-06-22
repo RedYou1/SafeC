@@ -1,6 +1,7 @@
 use crate::{
     _type::Type,
     compilable::{CompilType, Compilable, OUTPUT},
+    writable::Writable,
 };
 use std::{
     collections::HashMap,
@@ -15,6 +16,12 @@ pub struct Class {
     pub variables: HashMap<String, Type>,
     pub extends: Option<&'static mut Class>,
     pub implements: Vec<&'static mut Class>,
+}
+
+impl Writable for Class {
+    unsafe fn write(&mut self) -> String {
+        return format!("{}", self.name);
+    }
 }
 
 impl Compilable for Class {
@@ -47,14 +54,14 @@ impl Compilable for Class {
                 Some(e) => e
                     .variables
                     .iter_mut()
-                    .map(|f| format!("{} {};", f.1.compile(), f.0))
+                    .map(|f| format!("{} {};", f.1.write(), f.0))
                     .collect::<Vec<String>>()
                     .join("\n"),
                 None => String::new(),
             },
             self.variables
                 .iter_mut()
-                .map(|f| format!("{} {};", f.1.compile(), f.0))
+                .map(|f| format!("{} {};", f.1.write(), f.0))
                 .collect::<Vec<String>>()
                 .join("\n"),
             self.name

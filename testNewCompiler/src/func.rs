@@ -5,6 +5,7 @@ use crate::_type::Type;
 use crate::compilable::CompilType;
 use crate::compilable::Compilable;
 use crate::compilable::OUTPUT;
+use crate::writable::Writable;
 
 pub struct Func {
     pub included: bool,
@@ -13,6 +14,13 @@ pub struct Func {
     pub name: String,
     pub return_type: Option<Type>,
     pub params: Vec<(Type, String)>,
+    pub action: String,
+}
+
+impl Writable for Func {
+    unsafe fn write(&mut self) -> String {
+        return format!("{}", self.name);
+    }
 }
 
 impl Compilable for Func {
@@ -31,17 +39,18 @@ impl Compilable for Func {
         }
 
         return OUTPUT.unwrap().as_mut().unwrap().write_fmt(format_args!(
-            "{} {}({}){{\n\n}}\n",
+            "{} {}({}){{\n{}\n}}\n",
             match self.return_type.as_mut() {
-                Some(l) => l.compile(),
+                Some(l) => l.write(),
                 None => "void".to_string(),
             },
             self.name,
             self.params
                 .iter_mut()
-                .map(|f| format!("{} {};", f.0.compile(), f.1))
+                .map(|f| format!("{} {};", f.0.write(), f.1))
                 .collect::<Vec<String>>()
-                .join("\n")
+                .join("\n"),
+            self.action
         ));
     }
 }

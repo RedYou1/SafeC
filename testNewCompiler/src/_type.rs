@@ -1,4 +1,4 @@
-use crate::{class::Class, compilable::Compilable};
+use crate::{class::Class, compilable::Compilable, writable::Writable};
 
 pub struct Type {
     pub of: &'static mut Class,
@@ -9,8 +9,8 @@ pub struct Type {
     pub can_call_func: bool,
 }
 
-impl Type {
-    pub unsafe fn compile(&mut self) -> String {
+impl Writable for Type {
+    unsafe fn write(&mut self) -> String {
         if self.of.compile().is_err() {
             panic!("class compile error");
         }
