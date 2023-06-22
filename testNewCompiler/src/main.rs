@@ -29,6 +29,8 @@ use logger::logln;
 use logger::LogLevel::{ALARM, DEBUG, INFO, WARNING, XDEBUG};
 use my_file_reader::FileReader;
 
+use crate::compilable::CompilType;
+
 fn getmem() {
     if let Some(usage) = memory_stats() {
         logln(
@@ -47,30 +49,49 @@ fn getmem() {
     }
 }
 
+static mut TOKENS: Lazy<
+    HashMap<
+        &str,
+        &dyn Fn(
+            &mut FileReader,
+            Captures<'_>,
+            Option<&'static mut dyn Compilable>,
+        ) -> &'static mut dyn Compilable,
+    >,
+> = Lazy::new(|| HashMap::new());
+
 static mut CLASSES: Lazy<HashMap<String, Class>> = Lazy::new(|| HashMap::new());
 static mut FUNCS: Lazy<HashMap<String, Func>> = Lazy::new(|| HashMap::new());
 
 fn add_class<'a>(c: Class) {
     unsafe {
-        CLASSES.insert(c.name.to_string(), c);
+        if CLASSES.insert(c.name.to_string(), c).is_some() {
+            panic!("Class name already exists")
+        }
     }
 }
 
 fn add_class2<'a>(cname: &'static str, c: Class) {
     unsafe {
-        CLASSES.insert(cname.to_string(), c);
+        if CLASSES.insert(cname.to_string(), c).is_some() {
+            panic!("Class name already exists")
+        }
     }
 }
 
 fn add_func<'a>(c: Func) {
     unsafe {
-        FUNCS.insert(c.name.to_string(), c);
+        if FUNCS.insert(c.name.to_string(), c).is_some() {
+            panic!("Func name already exists")
+        }
     }
 }
 
 fn add_func2<'a>(cname: &'static str, c: Func) {
     unsafe {
-        FUNCS.insert(cname.to_string(), c);
+        if FUNCS.insert(cname.to_string(), c).is_some() {
+            panic!("Func name already exists")
+        }
     }
 }
 
@@ -136,7 +157,11 @@ fn get_type<'a>(name: String) -> Type {
     };
 }
 
-fn class_declaration(lines: &mut FileReader, c: Captures) {
+fn class_declaration(
+    lines: &mut FileReader,
+    c: Captures,
+    from: Option<&'static mut dyn Compilable>,
+) -> &'static mut dyn Compilable {
     logln(String::from("entering class_declaration"), XDEBUG);
 
     lines.next();
@@ -202,9 +227,15 @@ fn class_declaration(lines: &mut FileReader, c: Captures) {
     });
 
     logln(String::new(), INFO);
+
+    return get_class_mut(name).unwrap();
 }
 
-fn fn_declaration(lines: &mut FileReader, c: Captures) {
+fn fn_declaration(
+    lines: &mut FileReader,
+    c: Captures,
+    from: Option<&'static mut dyn Compilable>,
+) -> &'static mut dyn Compilable {
     logln(String::from("entering fn_declaration"), XDEBUG);
 
     lines.next();
@@ -256,6 +287,34 @@ fn fn_declaration(lines: &mut FileReader, c: Captures) {
     });
 
     logln(format!(")"), INFO);
+
+    return get_func_mut(name).unwrap();
+}
+
+fn declaration_declaration(
+    lines: &mut FileReader,
+    c: Captures,
+    from: Option<&'static mut dyn Compilable>,
+) -> &'static mut dyn Compilable {
+    if from.is_none() {
+        panic!("declaration need from")
+    }
+
+    let mut return_type: Type = get_type(String::from(c.get_str(1).unwrap()));
+
+    let name = c.get_str(12).unwrap();
+
+    let f = from.unwrap();
+    match f.get_type() {
+        CompilType::Class(class) => {
+            log(format!("its the Class {}", class.name), INFO);
+            return class;
+        }
+        CompilType::Func(func) => {
+            log(format!("its the Func {}", func.name), INFO);
+            return func;
+        }
+    };
 }
 
 const NAMEREGEX: &str = r"(?'nm'[a-zA-Z]{1}[a-zA-Z0-9]*)";
@@ -266,8 +325,44 @@ const TYPEREGEX: &str = formatcp!(
 );
 const FUNCDEFREGEX: &str =
     formatcp!(r"^{TYPEREGEX} ((?&cl))\((((?&tp) (?&nm)(, (?&tp) (?&nm))*){{0,1}})\):$");
+const DECLARATIONREGEX: &str = formatcp!(r"^{TYPEREGEX} ((?&nm))( = (.+)){{0,1}}$");
+
+fn parse_line(
+    lines: &mut FileReader,
+    line: String,
+    from: Option<&'static mut dyn Compilable>,
+) -> &'static mut dyn Compilable {
+    logln(format!("Begening test line {}", line.as_str()), DEBUG);
+    let mut captured;
+    unsafe {
+        captured = TOKENS
+            .iter()
+            .map(|i| {
+                logln(format!("test regex {}", i.0), XDEBUG);
+                (
+                    Regex::new(i.0).unwrap().captures(line.as_bytes()).unwrap(),
+                    i.1,
+                )
+            })
+            .filter(|i| i.0.is_some());
+    }
+    if captured.clone().count() != 1 {
+        panic!("No token match \"{}\"", line);
+    }
+    let i = captured.next().unwrap();
+    let c = i.0.unwrap();
+    debug_all_capture(&c);
+    let r = i.1(lines, c, from);
+    getmem();
+    return r;
+}
 
 fn main() -> Result<(), Error> {
+    unsafe {
+        TOKENS.insert(CLASSDEFREGEX, &class_declaration);
+        TOKENS.insert(FUNCDEFREGEX, &fn_declaration);
+        TOKENS.insert(DECLARATIONREGEX, &declaration_declaration);
+    }
     add_class2(
         "i32",
         Class {
@@ -305,40 +400,25 @@ fn main() -> Result<(), Error> {
         },
     );
 
-    let mut tokens: HashMap<&str, &dyn Fn(&mut FileReader, Captures<'_>)> = HashMap::new();
-
-    tokens.insert(CLASSDEFREGEX, &class_declaration);
-    tokens.insert(FUNCDEFREGEX, &fn_declaration);
-
     let mut lines = FileReader::new("..\\testRedRust\\main.rr").unwrap();
 
     getmem();
 
     while lines.current.as_deref().is_some() {
         let line = String::from(lines.current.as_deref().unwrap());
-        logln(format!("Begening test line {}", line.as_str()), DEBUG);
-        let mut captured = tokens
-            .iter()
-            .map(|i| {
-                logln(format!("test regex {}", i.0), XDEBUG);
-                (
-                    Regex::new(i.0).unwrap().captures(line.as_bytes()).unwrap(),
-                    i.1,
-                )
-            })
-            .filter(|i| i.0.is_some());
-        if captured.clone().count() != 1 {
-            return Err(Error::new(
-                std::io::ErrorKind::NotFound,
-                format!("No token match \"{}\"", line),
-            ));
-        }
-        let i = captured.next().unwrap();
-        let c = i.0.unwrap();
-        debug_all_capture(&c);
-        i.1(&mut lines, c);
-        getmem();
+        parse_line(&mut lines, line, None);
     }
+
+    let c = get_class_mut("A").unwrap();
+    declaration_declaration(
+        &mut lines,
+        Regex::new(DECLARATIONREGEX)
+            .unwrap()
+            .captures("i32 a".to_string().as_bytes())
+            .unwrap()
+            .unwrap(),
+        Some(c),
+    );
 
     unsafe {
         let mut temp = File::create("..\\testC\\testC.c")?;

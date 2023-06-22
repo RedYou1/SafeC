@@ -1,6 +1,6 @@
 use crate::{
     _type::Type,
-    compilable::{Compilable, OUTPUT},
+    compilable::{CompilType, Compilable, OUTPUT},
 };
 use std::{
     collections::HashMap,
@@ -18,6 +18,10 @@ pub struct Class {
 }
 
 impl Compilable for Class {
+    fn get_type(&'static mut self) -> CompilType {
+        CompilType::Class(self)
+    }
+
     unsafe fn compile(&mut self) -> Result<(), Error> {
         if self.included {
             return Ok(());
