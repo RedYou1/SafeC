@@ -9,9 +9,9 @@ mod object;
 mod writable;
 
 use _type::Type;
-use compilable::OUTPUT;
 use const_format::formatcp;
 use memory_stats::memory_stats;
+use object::Object;
 use once_cell::sync::Lazy;
 use pcre2::bytes::Captures;
 use pcre2::bytes::Regex;
@@ -22,6 +22,7 @@ use std::io::Error;
 use captures_utils::CapturesGetStr;
 use class::Class;
 use compilable::Compilable;
+use compilable::OUTPUT;
 use func::Func;
 use logger::debug_all_capture;
 use logger::log;
@@ -29,8 +30,8 @@ use logger::logln;
 #[allow(unused)]
 use logger::LogLevel::{ALARM, DEBUG, INFO, WARNING, XDEBUG};
 use my_file_reader::FileReader;
-
-use crate::compilable::CompilType;
+use writable::Writable;
+use writable::WriteType;
 
 fn getmem() {
     if let Some(usage) = memory_stats() {
@@ -56,8 +57,8 @@ static mut TOKENS: Lazy<
         &dyn Fn(
             &mut FileReader,
             Captures<'_>,
-            Option<&'static mut dyn Compilable>,
-        ) -> &'static mut dyn Compilable,
+            Option<&'static mut dyn Writable>,
+        ) -> &'static mut dyn Writable,
     >,
 > = Lazy::new(|| HashMap::new());
 
@@ -161,8 +162,8 @@ fn get_type<'a>(name: String) -> Type {
 fn class_declaration(
     lines: &mut FileReader,
     c: Captures,
-    from: Option<&'static mut dyn Compilable>,
-) -> &'static mut dyn Compilable {
+    from: Option<&'static mut dyn Writable>,
+) -> &'static mut dyn Writable {
     logln(String::from("entering class_declaration"), XDEBUG);
 
     lines.next();
@@ -235,8 +236,8 @@ fn class_declaration(
 fn fn_declaration(
     lines: &mut FileReader,
     c: Captures,
-    from: Option<&'static mut dyn Compilable>,
-) -> &'static mut dyn Compilable {
+    from: Option<&'static mut dyn Writable>,
+) -> &'static mut dyn Writable {
     logln(String::from("entering fn_declaration"), XDEBUG);
 
     lines.next();
@@ -296,25 +297,31 @@ fn fn_declaration(
 fn declaration_declaration(
     lines: &mut FileReader,
     c: Captures,
-    from: Option<&'static mut dyn Compilable>,
-) -> &'static mut dyn Compilable {
+    from: Option<&'static mut dyn Writable>,
+) -> &'static mut dyn Writable {
     if from.is_none() {
         panic!("declaration need from")
     }
 
-    let mut return_type: Type = get_type(String::from(c.get_str(1).unwrap()));
+    let return_type: Type = get_type(String::from(c.get_str(1).unwrap()));
+    let null = return_type.nullable;
+    let obj = Object {
+        of: return_type,
+        own: true,
+        is_null: null,
+        childrens: Vec::new(),
+    };
 
     let name = c.get_str(12).unwrap();
 
     let f = from.unwrap();
     match f.get_type() {
-        CompilType::Class(class) => {
-            log(format!("its the Class {}", class.name), INFO);
-            return class;
+        WriteType::Class(class) => {
+            class.variables.insert(name.to_string(), obj);
+            return class.variables.get_mut(name).unwrap();
         }
-        CompilType::Func(func) => {
-            log(format!("its the Func {}", func.name), INFO);
-            return func;
+        _ => {
+            panic!("Declaration not supported");
         }
     };
 }
@@ -332,8 +339,8 @@ const DECLARATIONREGEX: &str = formatcp!(r"^{TYPEREGEX} ((?&nm))( = (.+)){{0,1}}
 fn parse_line(
     lines: &mut FileReader,
     line: String,
-    from: Option<&'static mut dyn Compilable>,
-) -> &'static mut dyn Compilable {
+    from: Option<&'static mut dyn Writable>,
+) -> &'static mut dyn Writable {
     logln(format!("Begening test line {}", line.as_str()), DEBUG);
     let mut captured;
     unsafe {

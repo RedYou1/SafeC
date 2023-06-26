@@ -2,10 +2,10 @@ use std::io::Error;
 use std::io::Write;
 
 use crate::_type::Type;
-use crate::compilable::CompilType;
 use crate::compilable::Compilable;
 use crate::compilable::OUTPUT;
 use crate::writable::Writable;
+use crate::writable::WriteType;
 
 pub struct Func {
     pub included: bool,
@@ -21,14 +21,14 @@ impl Writable for Func {
     unsafe fn write(&mut self) -> String {
         return format!("{}", self.name);
     }
+
+    fn get_type(&'static mut self) -> WriteType {
+        WriteType::Func(self)
+    }
 }
 
 impl Compilable for Func {
-    fn get_type(&'static mut self) -> CompilType {
-        CompilType::Func(self)
-    }
-
-    unsafe fn compile(&mut self) -> Result<(), Error> {
+    unsafe fn compile(&'static mut self) -> Result<(), Error> {
         if self.included {
             return Ok(());
         }

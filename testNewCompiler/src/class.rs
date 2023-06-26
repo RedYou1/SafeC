@@ -1,7 +1,7 @@
 use crate::{
-    _type::Type,
-    compilable::{CompilType, Compilable, OUTPUT},
-    writable::Writable,
+    compilable::{Compilable, OUTPUT},
+    object::Object,
+    writable::{Writable, WriteType},
 };
 use std::{
     collections::HashMap,
@@ -13,23 +13,51 @@ pub struct Class {
     pub to_include: Vec<&'static mut dyn Compilable>,
 
     pub name: String,
-    pub variables: HashMap<String, Type>,
+    pub variables: HashMap<String, Object<'static>>,
     pub extends: Option<&'static mut Class>,
     pub implements: Vec<&'static mut Class>,
+}
+
+struct Var {
+    name: &'static String,
+    obj: &'static mut Object<'static>,
+}
+
+impl Class {
+    fn variables(&'static mut self) -> Vec<Var> {
+        let mut r: Vec<Var>;
+
+        match self.extends.as_mut() {
+            Some(e) => r = e.variables(),
+            None => r = Vec::new(),
+        }
+
+        let mut temp = self
+            .variables
+            .iter_mut()
+            .map(|i| Var {
+                name: i.0,
+                obj: i.1,
+            })
+            .collect::<Vec<Var>>();
+        r.append(&mut temp);
+
+        return r;
+    }
 }
 
 impl Writable for Class {
     unsafe fn write(&mut self) -> String {
         return format!("{}", self.name);
     }
+
+    fn get_type(&'static mut self) -> WriteType {
+        WriteType::Class(self)
+    }
 }
 
 impl Compilable for Class {
-    fn get_type(&'static mut self) -> CompilType {
-        CompilType::Class(self)
-    }
-
-    unsafe fn compile(&mut self) -> Result<(), Error> {
+    unsafe fn compile(&'static mut self) -> Result<(), Error> {
         if self.included {
             return Ok(());
         }
@@ -47,24 +75,19 @@ impl Compilable for Class {
             i.compile()?;
         }
 
+        let name = String::from(self.name.as_str());
+
+        let mut vars = self.variables();
+
+        let varsNames = vars
+            .iter_mut()
+            .map(|f| format!("{} {};", f.obj.of.write(), f.name))
+            .collect::<Vec<String>>()
+            .join("\n");
+
         return OUTPUT.unwrap().as_mut().unwrap().write_fmt(format_args!(
-            "typedef struct {} {{\n{}\n{}\n}}{};\n",
-            self.name,
-            match self.extends.as_mut() {
-                Some(e) => e
-                    .variables
-                    .iter_mut()
-                    .map(|f| format!("{} {};", f.1.write(), f.0))
-                    .collect::<Vec<String>>()
-                    .join("\n"),
-                None => String::new(),
-            },
-            self.variables
-                .iter_mut()
-                .map(|f| format!("{} {};", f.1.write(), f.0))
-                .collect::<Vec<String>>()
-                .join("\n"),
-            self.name
+            "typedef struct {} {{\n{}\n}}{};\n",
+            name, varsNames, name
         ));
     }
 }

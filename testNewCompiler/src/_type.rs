@@ -1,4 +1,8 @@
-use crate::{class::Class, compilable::Compilable, writable::Writable};
+use crate::{
+    class::Class,
+    compilable::Compilable,
+    writable::{Writable, WriteType},
+};
 
 pub struct Type {
     pub of: &'static mut Class,
@@ -10,7 +14,8 @@ pub struct Type {
 }
 
 impl Writable for Type {
-    unsafe fn write(&mut self) -> String {
+    unsafe fn write(&'static mut self) -> String {
+        let name = String::from(self.of.name.as_str());
         if self.of.compile().is_err() {
             panic!("class compile error");
         }
@@ -18,8 +23,12 @@ impl Writable for Type {
         return format!(
             "{}{}{}",
             if self.is_ref { "*" } else { "" },
-            self.of.name,
+            name,
             if self.nullable { "?" } else { "" }
         );
+    }
+
+    fn get_type(&'static mut self) -> WriteType {
+        return WriteType::Type(self);
     }
 }
