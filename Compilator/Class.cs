@@ -1,101 +1,56 @@
-﻿namespace RedRust
+﻿using PCRE;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace RedRust
 {
-	internal class Class : Type, Incluer
+	public class Class : Token
 	{
-		public List<Includable> includes { get; }
-		public bool included { get; set; } = false;
+		private bool Included;
+		private List<Token> ToInclude;
 
-		public readonly Variable[] variables;
-		public readonly Variable[] allVariables;
+		public required string Name { get; init; }
+		public Class? Extends;
+		public Class[] Implements;
 
-		public readonly List<Function> constructs;
-		public readonly List<Function> functions;
-
-		public Function? deconstruct;
-
-		public readonly Class? extend;
-		public List<Class> inherit = new();
-		public Typed? typed = null;
-
-		public Class(string name, Variable[] variables, Class? extend)
-			: base(name)
+		public Class(Class? extends, Class[] implements, bool included = false)
 		{
-			CanDeconstruct = true;
-			this.variables = variables;
+			Extends = extends;
+			Implements = implements;
+			Included = included;
 
-			List<Variable> allVariables = new();
-
-			if (extend is not null)
-				allVariables.AddRange(extend.allVariables);
-
-			allVariables.AddRange(variables);
-
-			this.allVariables = allVariables.ToArray();
-
-			this.extend = extend;
-			constructs = new List<Function>();
-			functions = new List<Function>();
-
-			includes = allVariables.Select(v => v.type is Includable i ? i : null)
-				.Where(v => v is not null).Cast<Includable>().ToList();
+			ToInclude = new();
+			if (extends is not null)
+				ToInclude.Add(extends);
+			ToInclude.AddRange(implements);
 		}
 
-		public virtual List<ToCallFunc> GetFunctions(string funcName, (Type type, LifeTime lifeTime)[] args, LifeTime current)
+
+		public static Class Declaration(FileReader lines, PcreMatch captures)
 		{
-			if (functions is not null)
-			{
-				List<Converter>[]? converts = null;
-				Function? func = functions.FirstOrDefault(f => f.name.StartsWith($"{id}_{funcName}") && (converts = f.CanExecute(args)) is not null);
-				if (func is not null && converts is not null)
-					return new() { new(this, func, converts) };
-			}
-			return extend?.GetFunctions(funcName, args, current) ?? throw new Exception("Function not found");
+			lines.Extract();
+
+			string[] m = captures.Groups[7].Value.Trim().Split(", ");
+
+			return new Class(
+				string.IsNullOrWhiteSpace(m[0]) ? null : Program.GetClass(m[0]),
+				m.Skip(1).Select(Program.GetInterface).ToArray())
+			{ Name = captures.Groups[2] };
 		}
 
-		public IEnumerable<Class> inherits()
+		public void Compile(StreamWriter output)
 		{
-			foreach (var c in inherit)
-				yield return c;
-			foreach (var c in inherit)
-				foreach (var c2 in c.inherits())
-					yield return c2;
-		}
-
-		public virtual void Compile(string tabs, StreamWriter sw)
-		{
-			if (included)
+			if (Included)
 				return;
-			included = true;
+			Included = true;
 
-			foreach (var include in includes)
-				include.Compile(tabs, sw);
+			foreach (Token t in ToInclude)
+				t.Compile(output);
 
-			sw.WriteLine($$"""{{tabs}}typedef struct {{id}} {""");
-			foreach (var v in allVariables)
-				sw.WriteLine($"{tabs}\t{v.type.id} {v.name};");
-			sw.WriteLine($$"""{{tabs}}}{{id}};""");
-
-			deconstruct?.Compile(tabs, sw);
-
-			if (typed is not null)
-			{
-				typed.Compile(tabs, sw);
-			}
-		}
-
-		internal class Free : Token
-		{
-			private string name;
-
-			public Free(string name)
-			{
-				this.name = name;
-			}
-
-			public void Compile(string tabs, StreamWriter sw)
-			{
-				sw.WriteLine($"{tabs}free({name});");
-			}
+			output.Write($"typedef struct {Name}{{\n\n}}{Name};\n");
 		}
 	}
 }

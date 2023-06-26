@@ -1,17 +1,14 @@
-﻿namespace RedRust
+﻿using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace RedRust
 {
-	internal interface Token
+	public interface Token
 	{
-		void Compile(string tabs, StreamWriter sw);
-	}
-
-	internal interface Includable : Token
-	{
-		bool included { get; set; }
-	}
-
-	internal interface Incluer : Includable
-	{
-		List<Includable> includes { get; }
+		public string Name { get; }
+		public void Compile(StreamWriter output);
 	}
 }
