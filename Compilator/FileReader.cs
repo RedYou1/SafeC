@@ -1,10 +1,4 @@
 ﻿using PCRE;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 
 namespace RedRust
 {
@@ -25,7 +19,7 @@ namespace RedRust
 			}
 		}
 
-		public FileReader(string[] lines)
+		public FileReader(params string[] lines)
 		{
 			Lines = lines;
 			Line = 0;
@@ -34,15 +28,15 @@ namespace RedRust
 		public void Next() => Line++;
 		public void Prev() => Line--;
 
-		public IEnumerable<Token> Parse()
+		public IEnumerable<Token> Parse(Class? fromC, Func? fromF, params Token[] from)
 		{
 			while (Current is not null)
 			{
 				var regex = Program.Regexs.Select(kvp => (new PcreRegex(kvp.Key).Match(Current), kvp.Value))
-					.Where(kvp => kvp.Item1.Success).ToArray();
+					.Where(kvp => kvp.Item1.Success && kvp.Value.Item1(this, kvp.Item1, fromC, fromF, from)).ToArray();
 				if (regex.Length == 0 || regex.Length >= 2)
 					throw new Exception();
-				yield return regex[0].Value(this, regex[0].Item1);
+				yield return regex[0].Value.Item2(this, regex[0].Item1, fromC, fromF, from);
 				Next();
 			}
 		}
@@ -54,14 +48,13 @@ namespace RedRust
 
 			int start = Line + 1;
 
-			int tabs = Current.Count(c => c == '\t') + 1;
 			do
 			{
 				Next();
-			} while (Current is not null && Current.Count(c => c == '\t') >= tabs);
+			} while (Current is not null && Current.Count(c => c == '\t') >= 1);
 			Prev();
 
-			return new(Lines.Skip(start).Take(Line - start + 1).ToArray());
+			return new(Lines.Skip(start).Take(Line - start + 1).Select(c => string.Join(null, c.Skip(1))).ToArray());
 		}
 	}
 }

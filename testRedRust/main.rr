@@ -7,10 +7,10 @@ A:
 	A(i32 a):
 		this.a = a
 
-	void Add(&dyn this):
+	void Add(*dyn this):
 		this.a = this.a + 1
 
-	void Add(&dyn this, i32 b):
+	void Add2(*dyn this, i32 b):
 		this.a = this.a + b
 
 B:
@@ -19,7 +19,7 @@ B:
 	B():
 		this.b = "Allo"
 
-	void Print(&dyn this?):
+	void Print(*dyn this?):
 		print("Hello World {")
 		if this is null:
 			print("null")
@@ -41,7 +41,7 @@ C(A):
 		this.id = id
 		this.b = new B()
 
-	void Add(&dyn this):
+	void Add(*dyn this):
 		this.a = this.a + 2
 
 B createB():
@@ -53,10 +53,10 @@ C createC(i32? a, str id):
 		return new C(a, id)
 	return new C(id)
 
-void Add(&typedyn A a):
+void Add(*typedyn A a):
 	a.Add()
-	if a is C c:
-		B b = c.b
+	if a is C:
+		B b = a.b
 		b.Print()
 		print("add is type C\n")
 	if a is not C:
@@ -88,7 +88,7 @@ i32 main():
 	print(":\n")
 	print(a.a)
 	print("\n")
-	a.Add(5)
+	a.Add2(5)
 	print(a.a)
 	print("\n")
 
