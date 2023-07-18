@@ -1,11 +1,14 @@
 ﻿using PCRE;
+using System.Text.RegularExpressions;
 
 namespace RedRust
 {
 	public class Object : Action
 	{
 		public Type ReturnType { get; }
-		public string Name => throw new NotImplementedException();
+
+		private string _name;
+		public string Name => $"{_name}{(ReturnType.Ref && ReturnType.CanCallFunc ? ".ptr" : "")}";
 
 		public Dictionary<string, Object> Objects;
 
@@ -29,16 +32,17 @@ namespace RedRust
 			{
 				_Of = value;
 				foreach (var v in _Of.AllVariables.Where(v => !Objects.ContainsKey(v.Name)))
-					Objects.Add(v.Name, new Object(v.ReturnType));
+					Objects.Add(v.Name, new Object(v.ReturnType, $"{Name}{(ReturnType.Ref || ReturnType.Null ? "->" : ".")}{v.Name}"));
 				foreach (var v in Objects.Keys.Where(v => !_Of.AllVariables.Any(a => v.Equals(a.Name))))
 					Objects.Remove(v);
 			}
 		}
 
-		public Object(Type returnType)
+		public Object(Type returnType, string name)
 		{
+			_name = name;
 			ReturnType = returnType;
-			Objects = ReturnType.Of.AllVariables.ToDictionary(v => v.Name, v => new Object(v.ReturnType));
+			Objects = ReturnType.Of.AllVariables.ToDictionary(v => v.Name, v => new Object(v.ReturnType, $"{Name}{(ReturnType.Ref || ReturnType.Null ? "->" : ".")}{v.Name}"));
 			_Of = ReturnType.Of;
 			_Null = ReturnType.Null;
 		}
@@ -49,7 +53,7 @@ namespace RedRust
 				throw new Exception();
 
 			if (lines.Current!.Equals("null"))
-				return new Object(new(Program.VOID, false, false, false, false, false));
+				return new Object(new(Program.VOID, false, false, true, false, false), "0");
 
 			string[] s = lines.Current!.Split('.');
 			Object o = fromF.Objects[s[0]];
@@ -61,9 +65,24 @@ namespace RedRust
 			return o;
 		}
 
-		public void Compile(StreamWriter output)
+		public static Object MathDeclaration(FileReader lines, PcreMatch captures, Class? fromC, Func? fromF, Token[] from)
 		{
-			throw new NotImplementedException();
+			Object o1 = new FileReader(captures[1]).Parse(fromC, fromF, from).Cast<Object>().First();
+			string op = captures[7];
+			Object o2 = new FileReader(captures[8]).Parse(fromC, fromF, from).Cast<Object>().First();
+
+			return new Object(new(o1.ReturnType.Of == Program.F32 || o2.ReturnType.Of == Program.F32 ? Program.F32 : Program.I32, true, false, false, false, false),
+				$"{o1.Name} {op} {o2.Name}");
+		}
+
+		public IEnumerable<Token> ToInclude()
+		{
+			yield return Of;
+		}
+
+		public IEnumerable<string> Compile()
+		{
+			yield return Name;
 		}
 	}
 }

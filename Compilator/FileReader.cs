@@ -25,6 +25,11 @@ namespace RedRust
 			Line = 0;
 		}
 
+		public void Reset()
+		{
+			Line = 0;
+		}
+
 		public void Next() => Line++;
 		public void Prev() => Line--;
 

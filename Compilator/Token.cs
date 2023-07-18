@@ -3,6 +3,8 @@
 	public interface Token
 	{
 		public string Name { get; }
-		public void Compile(StreamWriter output);
+
+		public IEnumerable<Token> ToInclude();
+		public IEnumerable<string> Compile();
 	}
 }

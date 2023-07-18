@@ -27,9 +27,19 @@ namespace RedRust
 			return new Return(a);
 		}
 
-		public void Compile(StreamWriter output)
+		public IEnumerable<Token> ToInclude()
 		{
-			throw new NotImplementedException();
+			return Action.ToInclude();
+		}
+
+		public IEnumerable<string> Compile()
+		{
+			var s = Action.Compile();
+			foreach (var s2 in s.SkipLast(1))
+			{
+				yield return s2;
+			}
+			yield return $"return {s.Last()}";
 		}
 	}
 }

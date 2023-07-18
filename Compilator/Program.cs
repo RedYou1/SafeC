@@ -11,7 +11,7 @@ namespace RedRust
 		public const string FUNCDEFREGEX = $@"^{TYPEREGEX} ((?&cl))\((((((\*|\&|(\*dyn )|(\*typedyn )|(\&typedyn )){{0,1}}this\?{{0,1}})|((?&tp) (?&nm)))(, (?&tp) (?&nm))*){{0,1}})\):$";
 		public const string CONSTRUCTORDEFREGEX = $@"^([a-zA-Z]{{1}}[a-zA-Z0-9]*)\((({TYPEREGEX} (?&nm)(, (?&tp) (?&nm))*){{0,1}})\):$";
 		public const string DECLARATIONREGEX = $@"^{TYPEREGEX} ((?&nm))( = (.+)){{0,1}}$";
-		public const string GETVARREGEX = $@"{NAMEREGEX}(\.(?&nm))*";
+		public const string GETVARREGEX = $@"(?'var'{NAMEREGEX}(\.(?&nm))*)";
 		public const string ASIGNREGEX = $@"^({GETVARREGEX}) = (.+)$";
 		public const string CALLFUNCREGEX = $@"^({GETVARREGEX})\((.*)\)$";
 		public const string BASEREGEX = $@"^base\((.*)\)$";
@@ -22,12 +22,14 @@ namespace RedRust
 		public const string STRINGREGEX = "^\"(.*)\"$";
 		public const string NUMBERREGEX = @"^[0-9_\.]+$";
 
-		public static readonly Class VOID = new Class(null, Array.Empty<Class>(), true) { Name = "void" };
-		public static readonly Class BOOL = new Class(null, Array.Empty<Class>(), true) { Name = "char" };
-		public static readonly Class I32 = new Class(null, Array.Empty<Class>(), true) { Name = "int" };
-		public static readonly Class F32 = new Class(null, Array.Empty<Class>(), true) { Name = "float" };
+		public const string MATHREGEX = $@"^(([0-9_\.]+)|({GETVARREGEX})) (\+|-|\*|\/) (([0-9_\.]+)|((?&var)))$";
+
+		public static readonly Class VOID = new Class("void", null, Array.Empty<Class>(), true);
+		public static readonly Bool BOOL = new Bool();
+		public static readonly Int I32 = new Int();
+		public static readonly Class F32 = new Class("float", null, Array.Empty<Class>(), true);
 		public static readonly Str STR = new Str();
-		public static readonly Class STRING = new Class(null, Array.Empty<Class>(), true) { Name = "char**" };
+		public static readonly Class STRING = new Class("char**", STR, Array.Empty<Class>(), true);
 
 		public static Dictionary<string, Token> Tokens = new() {
 			{"void",VOID },
@@ -37,7 +39,7 @@ namespace RedRust
 			{"str",STR },
 			{"string",STRING },
 
-			{"print", new Func(null,new (Type Type,string Name)[]{(new Type(STR,false,true,false,false,false),"s") }){Name="printf"} }
+			{"print", new Func(null,new (Type Type,string Name)[]{(new Type(STR,false,false,false,false,false),"s") }){Name="printf", Included = true} }
 		};
 
 		public static Dictionary<string, (Func<FileReader, PcreMatch, Class?, Func?, Token[], bool>, Func<FileReader, PcreMatch, Class?, Func?, Token[], Token>)> Regexs = new()
@@ -53,8 +55,9 @@ namespace RedRust
 			{ BASEREGEX,((_,_,_,_,_)=>true,CallFunction.BaseDeclaration) },
 			{ NEWREGEX,((_,_,_,_,_)=>true,CallFunction.NewDeclaration) },
 			{ GETVARREGEX, ((lines,captures,_,_,_)=>captures.Value.Equals(lines.Current),Object.Declaration) },
-			{ STRINGREGEX,((_,_,_,_,_)=>true, (_,_,_,_,_)=>new Object(GetType("str",null))) },
-			{ NUMBERREGEX,((_,_,_,_,_)=>true, (_,capture,_,_,_)=>new Object(GetType(capture.Value.Contains('.')?"f32":"i32",null))) }
+			{ STRINGREGEX,((_,_,_,_,_)=>true, (_,capture,_,_,_)=>new Object(GetType("str", null), capture.Value)) },
+			{ NUMBERREGEX,((_,_,_,_,_)=>true, (_,capture,_,_,_)=>new Object(GetType(capture.Value.Contains('.') ? "f32" : "i32", null), capture.Value)) },
+			{ MATHREGEX,((_,_,_,_,_)=>true, Object.MathDeclaration) }
 		};
 
 		public static Class GetClass(string name)
@@ -92,14 +95,39 @@ namespace RedRust
 		public static void Main()
 		{
 			STR.Init();
+			I32.Init();
+			BOOL.Init();
 
 			var lines = new FileReader(File.ReadAllLines(@"..\..\..\testRedRust\main.rr").Where(s => !string.IsNullOrWhiteSpace(s)).ToArray());
 
 			foreach (var t in lines.Parse(null, null, Array.Empty<Token>()))
 				continue;
 
-			using var output = File.CreateText(@"..\..\..\testC\testC.c");
-			Tokens["main"].Compile(output);
+			var output = File.CreateText(@"..\..\..\testC\testC.c");
+
+			if (Tokens["main"] is not Func f)
+				throw new Exception();
+
+			output.WriteLine("#include <stdio.h>");
+			output.WriteLine("#include <stdlib.h>");
+			output.WriteLine("#include <string.h>");
+
+			Write(ref output, f);
+
+			output.Dispose();
+		}
+
+		private static void Write(ref StreamWriter output, Token t)
+		{
+			foreach (Token tt in t.ToInclude())
+			{
+				Write(ref output, tt);
+			}
+
+			foreach (string s in t.Compile())
+			{
+				output.WriteLine($"{s}{(!s.EndsWith('{') && !s.EndsWith('}') && !s.EndsWith(',') ? ";" : "")}");
+			}
 		}
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using PCRE;
+using System.Text;
 
 namespace RedRust
 {
@@ -45,20 +46,32 @@ namespace RedRust
 			var d = new Declaration(r, current) { Name = captures[11] };
 
 			if (fromF is not null)
-				fromF.Objects.Add(d.Name, new(d.ReturnType));
+				fromF.Objects.Add(d.Name, new(d.ReturnType, d.Name));
 
 			return d;
 		}
 
-		public void Compile(StreamWriter output)
+		public IEnumerable<Token> ToInclude()
 		{
-			output.Write($"{Of} {Name}");
+			foreach (var t in Of.ToInclude())
+				yield return t;
+			if (Action is not null)
+				foreach (Token t in Action.ToInclude())
+					yield return t;
+		}
+
+		public IEnumerable<string> Compile()
+		{
+			StringBuilder s = new($"{Of} {Name}");
 			if (Action is not null)
 			{
-				output.Write(" = ");
-				Action.Compile(output);
+				s.Append(" = ");
+				var o = Action.Compile();
+				foreach (string ss in o.SkipLast(1))
+					yield return ss;
+				s.Append(o.Last());
 			}
-			output.WriteLine(";");
+			yield return s.ToString();
 		}
 	}
 }

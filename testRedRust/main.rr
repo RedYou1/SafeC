@@ -14,7 +14,7 @@ A:
 		this.a = this.a + b
 
 B:
-	string b
+	str b
 
 	B():
 		this.b = "Allo"
@@ -55,11 +55,11 @@ C createC(i32? a, str id):
 
 void Add(*typedyn A a):
 	a.Add()
-	if a is C:
-		B b = a.b
+	if a is C c:
+		B b = c.b
 		b.Print()
 		print("add is type C\n")
-	if a is not C:
+	else:
 		print("add is not type C\n")
 
 void TakeOwner(A a):
@@ -98,9 +98,7 @@ i32 main():
 	b.Print()
 
 
-	string start1 = a.id
-	string start2 = "ID2"
-	bool start = start1.StartsWith(start2)
+	bool start = a.id.StartsWith("ID2")
 
 	print(start)
 	print("\n")

@@ -1,4 +1,5 @@
 ﻿using PCRE;
+using System.Text;
 
 namespace RedRust
 {
@@ -11,6 +12,8 @@ namespace RedRust
 		public readonly List<Action> Actions = new();
 
 		public IEnumerable<Action> Childs => Actions;
+
+		private string condition = string.Empty;
 
 		public static If Declaration(FileReader lines, PcreMatch captures, Class? fromC, Func? fromF, Token[] from)
 		{
@@ -46,13 +49,15 @@ namespace RedRust
 					_null = true;
 					if (!obj.Null)
 						throw new Exception();
+					f.condition = $"{obj.Name} == 0";
 				}
-				if (ss[1].Equals("not null"))
+				else if (ss[1].Equals("not null"))
 				{
 					not_null = true;
 					if (!obj.Null)
 						throw new Exception();
 					obj.Null = false;
+					f.condition = $"{obj.Name} != 0";
 				}
 
 				if (!_null && !not_null)
@@ -63,10 +68,23 @@ namespace RedRust
 						not_class = true;
 					}
 
+					string[] c = ss[1].Split(" ");
+
 					_class = obj.Of;
-					obj.Of = Program.GetClass(ss[1]);
+					obj.Of = Program.GetClass(c[0]);
+
+					f.condition = $"{obj.Name.Substring(0, obj.Name.Length - ".ptr".Length)}.type {(not_class ? "!" : "=")}= Extend${_class.Name}${obj.Of.Name}";
+
+					if (!not_class)
+					{
+						Type t = new Type(obj.Of, false, true, false, false, false);
+						f.Actions.Add(new Declaration(t, obj) { Name = c[1] });
+						fromF.Objects.Add(c[1], new(t, c[1]));
+					}
 				}
 			}
+			else if (!captures.Value.Equals("else:"))
+				throw new Exception();
 
 			foreach (var t in lines.Extract().Parse(fromC, fromF, from.Append(f).ToArray()))
 			{
@@ -92,9 +110,24 @@ namespace RedRust
 			return f;
 		}
 
-		public void Compile(StreamWriter output)
+		public IEnumerable<Token> ToInclude()
 		{
-			throw new NotImplementedException();
+			foreach (Action a in Actions)
+				foreach (Token t in a.ToInclude())
+					yield return t;
+		}
+
+		public IEnumerable<string> Compile()
+		{
+			if (condition.Length == 0)
+				yield return "else {";
+			else
+				yield return $"if ({condition}) {{";
+
+			foreach (Action a in Actions)
+				foreach (string s in a.Compile())
+					yield return $"\t{s}";
+			yield return "}";
 		}
 	}
 }

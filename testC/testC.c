@@ -1,10 +1,14 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-typedef enum bool{ false = 0, true = 1 } bool;
 typedef struct A {
 	int a;
 }A;
+A A_A_0() {
+	A this;
+	this.a = 1;
+	return this;
+}
 typedef enum Extend$A {
 	Extend$A$A,
 	Extend$A$C,
@@ -13,181 +17,129 @@ typedef struct Typed$A {
 	A* ptr;
 	Extend$A type;
 }Typed$A;
-A* A_Construct() {
-	A _this;
-	A* this = &_this;
-	this->a = 1;
-	return this;
-}
 void A_Add(A* this) {
 	this->a = this->a + 1;
 }
-typedef struct Array$char {
-	char* ptr;
-	unsigned long len;
-}Array$char;
-void Array$char_DeConstruct(Array$char this) {
-	free(this.ptr);
-}
 typedef struct B {
-	Array$char b;
+	char* b;
 }B;
-void B_DeConstruct(B this) {
-	Array$char_DeConstruct(this.b);
-}
 typedef struct C {
 	int a;
-	const char* id;
+	char* id;
 	B b;
 }C;
-void C_DeConstruct(C this) {
-	B_DeConstruct(this.b);
-}
-void C_Add(C* this) {
-	this->a = this->a + 2;
-}
 void B_Print(B* this) {
 	printf("Hello World {");
-	if (this == NULL) {
+	if (this == 0) {
 		printf("null");
 	}
 	else {
-		printf("%s", this->b.ptr);
+		printf(this->b);
 	}
 	printf("}\n");
 }
 void Add(Typed$A a) {
-	if (a.type == Extend$A$A) {
-		A_Add(a.ptr);
-	}
-	else if (a.type == Extend$A$C) {
-		C_Add(a.ptr);
-	}
+	A_Add(a.ptr);
 	if (a.type == Extend$A$C) {
 		C* c = a.ptr;
 		B b = c->b;
-		B* Converter = &b;
-		B_Print(Converter);
+		B_Print(&b);
 		printf("add is type C\n");
 	}
-	if (a.type != Extend$A$C) {
+	else {
 		printf("add is not type C\n");
 	}
 }
-Typed$A A_to_Typed$A(A this) {
-	Typed$A t;
-	t.ptr = &this;
-	t.type = Extend$A$A;
-	return t;
+Typed$A A_to_Typed$A(A* t) {
+	Typed$A this;
+	this.ptr = t;
+	this.type = Extend$A$A;
+	return this;
 }
 void TakeOwner(A a) {
 	printf("%i", a.a);
 	printf("\n");
 }
-A* A_BaseConstruct2(A* this, int a) {
+void A_Base_A_1(A* this, int a) {
 	this->a = a;
+}
+B B_B_0() {
+	B this;
+	this.b = "Allo";
 	return this;
 }
-Array$char str_toString(const char* this) {
-	Array$char newthis;
-	newthis.len = strlen(this);
-	newthis.ptr = (char*)malloc(newthis.len + 1);
-	memcpy(newthis.ptr, this, newthis.len + 1);
-	return newthis;
-}
-B* B_Construct() {
-	B _this;
-	B* this = &_this;
-	Array$char Converter = str_toString("Allo");
-	this->b = Converter;
+C C_C_1(int a, char* id) {
+	C this;
+	A_Base_A_1(&this, a);
+	this.id = id;
+	this.b = B_B_0();
 	return this;
 }
-C* C_Construct2(int a, const char* id) {
-	C _this;
-	C* this = &_this;
-	A_BaseConstruct2(this, a);
-	this->id = id;
-	this->b = *B_Construct();
-	return this;
-}
-A* A_BaseConstruct(A* this) {
+void A_Base_A_0(A* this) {
 	this->a = 1;
+}
+C C_C_0(char* id) {
+	C this;
+	A_Base_A_0(&this);
+	this.id = id;
+	this.b = B_B_0();
 	return this;
 }
-C* C_Construct(const char* id) {
-	C _this;
-	C* this = &_this;
-	A_BaseConstruct(this);
-	this->id = id;
-	this->b = *B_Construct();
-	return this;
-}
-C createC(int* a, const char* id) {
-	if (a != NULL) {
-		return *C_Construct2(*a, id);
+C createC(int* a, char* id) {
+	if (a != 0) {
+		return C_C_1(*a, id);
 	}
-	return *C_Construct(id);
+	return C_C_0(id);
 }
-Typed$A C_to_Typed$A(C this) {
-	Typed$A t;
-	t.ptr = &this;
-	t.type = Extend$A$C;
-	return t;
+Typed$A C_to_Typed$A(C* t) {
+	Typed$A this;
+	this.ptr = t;
+	this.type = Extend$A$C;
+	return this;
 }
 void A_Add2(A* this, int b) {
 	this->a = this->a + b;
 }
 B createB() {
-	B b = *B_Construct();
+	B b = B_B_0();
 	return b;
 }
-bool Array$char_StartsWith(Array$char* this, Array$char* o) {
-	return o->len > this->len ? false : memcmp(this->ptr, o->ptr, o->len) == 0;
+char StartsWith(char** this, char** s) {
 }
 int main() {
-	A aa = *A_Construct();
+	A aa = A_A_0();
 	printf("%i", aa.a);
 	printf("\n");
-	Typed$A Converter = A_to_Typed$A(aa);
-	Add(Converter);
+	Add(A_to_Typed$A(&aa));
 	TakeOwner(aa);
-	C a = createC(NULL, "ID");
-	printf("%s", a.id);
+	C a = createC(0, "ID");
+	printf(a.id);
 	printf(":\n");
 	printf("%i", a.a);
 	printf("\n");
-	Typed$A Converter2 = C_to_Typed$A(a);
-	Add(Converter2);
+	Add(C_to_Typed$A(&a));
 	printf("%i", a.a);
 	printf("\n");
-	C_DeConstruct(a);
-	int Converter3 = 5;
-	a = createC(&Converter3, "ID2");
-	C_DeConstruct(a);
-	int Converter4 = 6;
-	a = createC(&Converter4, "ID2,1");
-	printf("%s", a.id);
+	int _0 = 5;
+	a = createC(&_0, "ID2");
+	int _1 = 6;
+	a = createC(&_1, "ID2,1");
+	printf(a.id);
 	printf(":\n");
 	printf("%i", a.a);
 	printf("\n");
 	A_Add2(&a, 5);
 	printf("%i", a.a);
 	printf("\n");
-	B* b = NULL;
+	B* b = 0;
 	B_Print(b);
-	B Converter5 = createB();
-	b = &Converter5;
+	B _2 = createB();
+	b = &_2;
 	B_Print(b);
-	Array$char Converter6 = str_toString(a.id);
-	Array$char start1 = Converter6;
-	Array$char Converter7 = str_toString("ID2");
-	Array$char start2 = Converter7;
-	bool start = Array$char_StartsWith(&start1, &start2);
-	printf("%i", start);
+	char* _3 = a.id;
+	char* _4 = "ID2";
+	char start = StartsWith(&_3, &_4);
+	printf(start ? "True" : "False");
 	printf("\n");
-	C_DeConstruct(a);
-	B_DeConstruct(Converter5);
-	Array$char_DeConstruct(start1);
-	Array$char_DeConstruct(start2);
 	return 0;
 }

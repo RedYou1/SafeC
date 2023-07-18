@@ -1,11 +1,11 @@
 ﻿using PCRE;
+using System.Text;
 
 namespace RedRust
 {
 	public class Func : Token
 	{
-		private bool Included = false;
-		private List<Token> ToInclude = new();
+		public bool Included { get; set; }
 
 		public required string Name { get; init; }
 		public readonly Type? ReturnType;
@@ -19,13 +19,9 @@ namespace RedRust
 			ReturnType = returnType;
 			Params = _params;
 
-			if (returnType is not null)
-				ToInclude.Add(returnType.Of);
-			ToInclude.AddRange(Params.Select(p => p.Type.Of));
-
-			foreach (var param in _params)
+			foreach (var param in Params)
 			{
-				Objects.Add(param.Name, new(param.Type));
+				Objects.Add(param.Name, new(param.Type, param.Name));
 			}
 		}
 
@@ -39,6 +35,7 @@ namespace RedRust
 
 			string _params = captures[13];
 
+			string fRawName = captures[11];
 			var f = new Func(
 				returnType,
 				string.IsNullOrWhiteSpace(_params) ? Array.Empty<(Type Type, string Name)>()
@@ -50,13 +47,13 @@ namespace RedRust
 						return (Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC), p2.Last());
 					}).ToArray())
 			{
-				Name = captures[11]
+				Name = $"{(fromC is null ? "" : $"{fromC.Name}_")}{fRawName}"
 			};
 
 			if (fromC is null)
-				Program.Tokens.Add(f.Name, f);
+				Program.Tokens.Add(fRawName, f);
 			else
-				fromC.Funcs.Add(f.Name, f);
+				fromC.Funcs.Add(fRawName, f);
 
 
 			foreach (var t in lines.Extract().Parse(fromC, f, Array.Empty<Token>()))
@@ -69,21 +66,49 @@ namespace RedRust
 			return f;
 		}
 
-		public void Compile(StreamWriter output)
+		public IEnumerable<Action>[]? CanCall(Func from, params Action[] args)
+		{
+			if (Params.Length != args.Length)
+				return null;
+
+			IEnumerable<Action>[] converts = new IEnumerable<Action>[Params.Length];
+
+			for (int i = 0; i < Params.Length; i++)
+			{
+				converts[i] = Params[i].Type.Convert(args[i], from)!;
+				if (converts[i] is null)
+					return null;
+			}
+			return converts;
+		}
+
+		public IEnumerable<Token> ToInclude()
 		{
 			if (Included)
-				return;
+				yield break;
+
+			if (ReturnType is not null)
+				foreach (var t in ReturnType.ToInclude())
+					yield return t;
+			foreach (var p in Params)
+				foreach (var t in p.Type.ToInclude())
+					yield return t;
+			foreach (var a in Actions)
+				foreach (var t in a.ToInclude())
+					yield return t;
+		}
+
+		public virtual IEnumerable<string> Compile()
+		{
+			if (Included)
+				yield break;
 			Included = true;
 
-			foreach (Token t in ToInclude)
-				t.Compile(output);
-
-			output.Write($"{(ReturnType is null ? "void" : ReturnType)} {Name}({string.Join(", ", Params.Select(p => $"{p.Type} {p.Name}"))}){{\n");
+			yield return $"{(ReturnType is null ? "void" : ReturnType)} {Name}({string.Join(", ", Params.Select(p => $"{p.Type} {p.Name}"))}) {{";
 			foreach (Action a in Actions)
-			{
-				a.Compile(output);
-			}
-			output.Write("\n}\n");
+				foreach (string s in a.Compile())
+					yield return $"\t{s}";
+			yield return "}";
 		}
 	}
 }

@@ -1,13 +1,10 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
+﻿
 namespace RedRust
 {
 	public class Str : Class
 	{
-		[SetsRequiredMembers]
-		public Str() : base(null, Array.Empty<Class>(), true)
+		public Str() : base("char*", null, Array.Empty<Class>(), true)
 		{
-			Name = "char*";
 		}
 
 		public void Init()
