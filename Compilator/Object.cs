@@ -8,7 +8,7 @@ namespace RedRust
 		public Type ReturnType { get; }
 
 		private string _name;
-		public string Name => $"{_name}{(ReturnType.Ref && ReturnType.CanCallFunc ? ".ptr" : "")}";
+		public string Name => $"{_name}{(ReturnType.Ref && ReturnType.CanBeChild && ReturnType.CanCallFunc ? ".ptr" : "")}";
 
 		public Dictionary<string, Object> Objects;
 
@@ -21,6 +21,18 @@ namespace RedRust
 				if (value && !ReturnType.Null)
 					throw new Exception();
 				_Null = value;
+			}
+		}
+
+		private bool _Own;
+		public bool Own
+		{
+			get => _Own;
+			set
+			{
+				if (value && !_Own)
+					throw new Exception();
+				_Own = value;
 			}
 		}
 
@@ -38,12 +50,13 @@ namespace RedRust
 			}
 		}
 
-		public Object(Type returnType, string name)
+		public Object(Type returnType, string name, bool own = true)
 		{
 			_name = name;
 			ReturnType = returnType;
 			Objects = ReturnType.Of.AllVariables.ToDictionary(v => v.Name, v => new Object(v.ReturnType, $"{Name}{(ReturnType.Ref || ReturnType.Null ? "->" : ".")}{v.Name}"));
 			_Of = ReturnType.Of;
+			_Own = own;
 			_Null = ReturnType.Null;
 		}
 

@@ -106,6 +106,14 @@ B createB() {
 }
 char StartsWith(char** this, char** s) {
 }
+typedef struct Lock {
+	int a;
+}Lock;
+Lock Lock_Lock_0(int* a) {
+	Lock this;
+	this.a = *a;
+	return this;
+}
 int main() {
 	A aa = A_A_0();
 	printf("%i", aa.a);
@@ -141,5 +149,9 @@ int main() {
 	char start = StartsWith(&_3, &_4);
 	printf(start ? "True" : "False");
 	printf("\n");
+	int l = 5;
+	Lock lock = Lock_Lock_0(&l);
+	int _5 = 4;
+	Lock lock2 = Lock_Lock_0(&_5);
 	return 0;
 }

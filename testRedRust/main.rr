@@ -66,6 +66,12 @@ void TakeOwner(A a):
 	print(a.a)
 	print("\n")
 
+Lock:
+	i32 a
+
+	Lock(&i32 a):
+		this.a = a
+
 i32 main():
 	A aa = new A()
 	print(aa.a)
@@ -103,4 +109,7 @@ i32 main():
 	print(start)
 	print("\n")
 
+	i32 l = 5
+	Lock lock = new Lock(l)
+	Lock lock2 = new Lock(4)
 	return 0

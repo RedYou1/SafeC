@@ -40,6 +40,11 @@
 
 		public IEnumerable<Action>? Convert(Action other, Func from)
 		{
+			Object? ob = other as Object;
+
+			if (ob is not null && !ob.Own)
+				throw new Exception();
+
 			if (other.ReturnType.Of == Program.VOID)
 			{
 				if (!Null)
@@ -48,7 +53,7 @@
 			}
 
 			if (!Null)
-				if (other is Object ob)
+				if (ob is not null)
 				{
 					if (ob.Null)
 						return null;
@@ -63,7 +68,14 @@
 				return null;
 
 
-			if (Ref && !other.ReturnType.Ref && CanCallFunc)
+			if (Ref && Own)
+			{
+				if (ob is null)
+					throw new Exception();
+				ob.Own = false;
+			}
+
+			if (Ref && !other.ReturnType.Ref && CanBeChild && CanCallFunc)
 			{
 				var f = Of.Childs.GetConverter(other.ReturnType.Of);
 				var args = f.CanCall(from, other);
@@ -75,7 +87,7 @@
 			{
 				char op = Null || Ref ? '&' : '*';
 
-				if (other is Object ob && from.Objects.ContainsKey(ob.Name))
+				if (ob is not null && from.Objects.ContainsKey(ob.Name))
 				{
 					return new Action[] { new Object(this, $"{op}{other.Name}") };
 				}
@@ -91,7 +103,7 @@
 
 
 					var d = new Declaration(other.ReturnType, other) { Name = name };
-					from.Objects.Add(d.Name, new(d.ReturnType, d.Name));
+					from.Objects.Add(d.Name, new(d.ReturnType, d.Name, !Ref || !Own));
 					return new Action[] {
 						d,
 						new Object(this, $"{op}{d.Name}")
@@ -106,14 +118,14 @@
 
 		public IEnumerable<Token> ToInclude()
 		{
-			if (Ref && CanCallFunc)
+			if (Ref && CanBeChild && CanCallFunc)
 				yield return Of.Childs;
 			yield return Of;
 		}
 
 		public override string ToString()
 		{
-			if (Ref && CanCallFunc)
+			if (Ref && CanBeChild && CanCallFunc)
 				return $"Typed${Of.Name}{(Null ? "*" : "")}";
 			return $"{Of.Name}{(Ref || Null ? "*" : "")}";
 		}
