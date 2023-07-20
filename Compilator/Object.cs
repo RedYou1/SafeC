@@ -8,7 +8,7 @@ namespace RedRust
 		public Type ReturnType { get; }
 
 		private string _name;
-		public string Name => $"{_name}{(ReturnType.Ref && ReturnType.CanBeChild && ReturnType.CanCallFunc ? ".ptr" : "")}";
+		public string Name => $"{_name}";
 
 		public Dictionary<string, Object> Objects;
 
@@ -44,7 +44,7 @@ namespace RedRust
 			{
 				_Of = value;
 				foreach (var v in _Of.AllVariables.Where(v => !Objects.ContainsKey(v.Name)))
-					Objects.Add(v.Name, new Object(v.ReturnType, $"{Name}{(ReturnType.Ref || ReturnType.Null ? "->" : ".")}{v.Name}"));
+					Objects.Add(v.Name, new Object(v.ReturnType, $"{Name}{(ReturnType.DynTyped ? ".ptr" : "")}{(ReturnType.IsNotStack ? "->" : ".")}{v.Name}"));
 				foreach (var v in Objects.Keys.Where(v => !_Of.AllVariables.Any(a => v.Equals(a.Name))))
 					Objects.Remove(v);
 			}
@@ -54,7 +54,7 @@ namespace RedRust
 		{
 			_name = name;
 			ReturnType = returnType;
-			Objects = ReturnType.Of.AllVariables.ToDictionary(v => v.Name, v => new Object(v.ReturnType, $"{Name}{(ReturnType.Ref || ReturnType.Null ? "->" : ".")}{v.Name}"));
+			Objects = ReturnType.Of.AllVariables.ToDictionary(v => v.Name, v => new Object(v.ReturnType, $"{Name}{(ReturnType.DynTyped ? ".ptr" : "")}{(ReturnType.IsNotStack ? "->" : ".")}{v.Name}"));
 			_Of = ReturnType.Of;
 			_Own = own;
 			_Null = ReturnType.Null;

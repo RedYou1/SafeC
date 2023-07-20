@@ -104,14 +104,17 @@ B createB() {
 	B b = B_B_0();
 	return b;
 }
-char StartsWith(char** this, char** s) {
+char StartsWith(char* this, char* s) {
 }
 typedef struct Lock {
-	int a;
+	int l;
+	Typed$A a;
 }Lock;
-Lock Lock_Lock_0(int* a) {
+Lock Lock_Lock_0(int l, Typed$A a) {
 	Lock this;
-	this.a = *a;
+	this.l = l;
+	this.a = a;
+	Add(this.a);
 	return this;
 }
 int main() {
@@ -144,14 +147,10 @@ int main() {
 	B _2 = createB();
 	b = &_2;
 	B_Print(b);
-	char* _3 = a.id;
-	char* _4 = "ID2";
-	char start = StartsWith(&_3, &_4);
+	char start = StartsWith(a.id, "ID2");
 	printf(start ? "True" : "False");
 	printf("\n");
-	int l = 5;
-	Lock lock = Lock_Lock_0(&l);
-	int _5 = 4;
-	Lock lock2 = Lock_Lock_0(&_5);
+	A_Add2(&a, 5);
+	Lock lock = Lock_Lock_0(5, C_to_Typed$A(&a));
 	return 0;
 }

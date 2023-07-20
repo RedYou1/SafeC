@@ -9,6 +9,12 @@
 		public readonly bool CanBeChild;
 		public readonly bool CanCallFunc;
 
+
+		public bool IsPtr => !DynTyped && IsNotStack;
+		public bool IsNotStack => Ref || Null;
+		public bool DynTyped => Ref && CanBeChild && CanCallFunc;
+
+
 		public Type(Class of,
 			bool own,
 			bool _ref,
@@ -61,12 +67,35 @@
 				else if (other.ReturnType.Null)
 					return null;
 
+			if (!DynTyped && other.ReturnType.DynTyped)
+				if (Convert(other.ReturnType.Of))
+					return new Action[] { new Object(new(other.ReturnType.Of, false, true, false, false, true), $"{other.Name}.ptr") };
+				else
+					return null;
+
 			if (other.ReturnType.Of.Casts.TryGetValue(Of, out Func<Action, Action>? a) && a is not null)
 				return Convert(a(other), from);
 
 			if (!Convert(other.ReturnType.Of))
 				return null;
 
+
+			if (DynTyped && !other.ReturnType.Ref)
+			{
+				var f = Of.Childs.GetConverter(other.ReturnType.Of);
+				var args = f.CanCall(from, other);
+
+				if (Ref && Own)
+				{
+					if (ob is null)
+						throw new Exception();
+					ob.Own = false;
+				}
+
+				if (args is null)
+					throw new Exception();
+				return new Action[] { new CallFunction(f, args) };
+			}
 
 			if (Ref && Own)
 			{
@@ -75,17 +104,9 @@
 				ob.Own = false;
 			}
 
-			if (Ref && !other.ReturnType.Ref && CanBeChild && CanCallFunc)
+			if (IsNotStack != other.ReturnType.IsNotStack)
 			{
-				var f = Of.Childs.GetConverter(other.ReturnType.Of);
-				var args = f.CanCall(from, other);
-				if (args is null)
-					throw new Exception();
-				return new Action[] { new CallFunction(f, args) };
-			}
-			else if ((Null || Ref) != (other.ReturnType.Null || other.ReturnType.Ref))
-			{
-				char op = Null || Ref ? '&' : '*';
+				char op = IsNotStack ? '&' : '*';
 
 				if (ob is not null && from.Objects.ContainsKey(ob.Name))
 				{
@@ -118,16 +139,16 @@
 
 		public IEnumerable<Token> ToInclude()
 		{
-			if (Ref && CanBeChild && CanCallFunc)
+			if (DynTyped)
 				yield return Of.Childs;
 			yield return Of;
 		}
 
 		public override string ToString()
 		{
-			if (Ref && CanBeChild && CanCallFunc)
+			if (DynTyped)
 				return $"Typed${Of.Name}{(Null ? "*" : "")}";
-			return $"{Of.Name}{(Ref || Null ? "*" : "")}";
+			return $"{Of.Name}{(IsNotStack ? "*" : "")}";
 		}
 	}
 }

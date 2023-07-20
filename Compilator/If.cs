@@ -73,13 +73,20 @@ namespace RedRust
 					_class = obj.Of;
 					obj.Of = Program.GetClass(c[0]);
 
-					f.condition = $"{obj.Name.Substring(0, obj.Name.Length - ".ptr".Length)}.type {(not_class ? "!" : "=")}= Extend${_class.Name}${obj.Of.Name}";
+					f.condition = $"{obj.Name}.type {(not_class ? "!" : "=")}= Extend${_class.Name}${obj.Of.Name}";
 
 					if (!not_class)
 					{
 						Type t = new Type(obj.Of, false, true, false, false, false);
-						f.Actions.Add(new Declaration(t, obj) { Name = c[1] });
-						fromF.Objects.Add(c[1], new(t, c[1]));
+						Action l;
+						if (obj.ReturnType.DynTyped)
+							l = new Object(obj.ReturnType, $"{obj.Name}.ptr", obj.Own);
+						else
+							l = obj;
+
+						string name = c[1];
+						f.Actions.Add(new Declaration(t, l) { Name = name });
+						fromF.Objects.Add(name, new(t, name));
 					}
 				}
 			}
