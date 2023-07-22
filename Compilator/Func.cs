@@ -1,21 +1,33 @@
 ﻿using PCRE;
-using System.Text;
 
 namespace RedRust
 {
+	public class Parameter
+	{
+		public readonly Type Type;
+		public readonly string Name;
+
+		public Parameter(Type type, string name)
+		{
+			Type = type;
+			Name = name;
+		}
+	}
+
 	public class Func : Token
 	{
 		public bool Included { get; set; }
 
 		public required string Name { get; init; }
 		public readonly Type? ReturnType;
-		public readonly (Type Type, string Name)[] Params;
+		public readonly Parameter[] Params;
 		public readonly List<Action> Actions = new();
 
 		public readonly Dictionary<string, Object> Objects = new();
 
-		public Func(Type? returnType, (Type Type, string Name)[] _params)
+		public Func(Type? returnType, Parameter[] _params, bool included = false)
 		{
+			Included = included;
 			ReturnType = returnType;
 			Params = _params;
 
@@ -38,13 +50,13 @@ namespace RedRust
 			string fRawName = captures[11];
 			var f = new Func(
 				returnType,
-				string.IsNullOrWhiteSpace(_params) ? Array.Empty<(Type Type, string Name)>()
+				string.IsNullOrWhiteSpace(_params) ? Array.Empty<Parameter>()
 					: _params.Split(", ").Select(p =>
 					{
 						string[] p2 = p.Split(" ");
 						if (p2.Last().Contains("this"))
 							p2 = p2.Append("this").ToArray();
-						return (Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC), p2.Last());
+						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC), p2.Last());
 					}).ToArray())
 			{
 				Name = $"{(fromC is null ? "" : $"{fromC.Name}_")}{fRawName}"

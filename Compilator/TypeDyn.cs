@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-
-namespace RedRust
+﻿namespace RedRust
 {
 	public class TypeDyn : Class
 	{
@@ -29,10 +22,10 @@ namespace RedRust
 			Func? f = null;
 			if (converter.TryGetValue(c.Name, out f))
 				return f;
-			f = new Func(new(this, true, false, false, false, false), new (Type Type, string Name)[] { new(new(c, false, true, false, false, false), "t") }) { Name = $"{c.Name}_to_{Name}" };
+			f = new Func(new(this, true, false, false, false, false), new Parameter[] { new(new(c, false, true, false, false, false), "t") }) { Name = $"{c.Name}_to_{Name}" };
 			f.Actions.Add(new Declaration(new(this, true, false, false, false, false), null) { Name = "this" });
 			f.Actions.Add(new Asign(new Action[] { f.Objects["t"] }) { Name = "this.ptr" });
-			f.Actions.Add(new Asign(new Action[] { new Object(new(Program.STR, true, false, false, false, false), $"Extend${Of.Name}${c.Name}") }) { Name = "this.type" });
+			f.Actions.Add(new Asign(new Action[] { new Object(new(Program.GetClass("str"), true, false, false, false, false), $"Extend${Of.Name}${c.Name}") }) { Name = "this.type" });
 			f.Actions.Add(new Return(new Object(new(this, true, false, false, false, false), "this")));
 			converter.Add(c.Name, f);
 			return f;

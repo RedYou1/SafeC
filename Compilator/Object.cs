@@ -1,5 +1,4 @@
 ﻿using PCRE;
-using System.Text.RegularExpressions;
 
 namespace RedRust
 {
@@ -84,7 +83,10 @@ namespace RedRust
 			string op = captures[7];
 			Object o2 = new FileReader(captures[8]).Parse(fromC, fromF, from).Cast<Object>().First();
 
-			return new Object(new(o1.ReturnType.Of == Program.F32 || o2.ReturnType.Of == Program.F32 ? Program.F32 : Program.I32, true, false, false, false, false),
+			Class f32 = Program.GetClass("f32");
+			Class i32 = Program.GetClass("i32");
+
+			return new Object(new(o1.ReturnType.Of == f32 || o2.ReturnType.Of == f32 ? f32 : i32, true, false, false, false, false),
 				$"{o1.Name} {op} {o2.Name}");
 		}
 

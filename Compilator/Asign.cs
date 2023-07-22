@@ -1,5 +1,4 @@
 ﻿using PCRE;
-using System;
 
 namespace RedRust
 {

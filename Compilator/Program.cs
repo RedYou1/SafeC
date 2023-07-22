@@ -1,4 +1,5 @@
 ﻿using PCRE;
+using System.Reflection;
 
 namespace RedRust
 {
@@ -25,21 +26,9 @@ namespace RedRust
 		public const string MATHREGEX = $@"^(([0-9_\.]+)|({GETVARREGEX})) (\+|-|\*|\/) (([0-9_\.]+)|((?&var)))$";
 
 		public static readonly Class VOID = new Class("void", null, Array.Empty<Class>(), true);
-		public static readonly Bool BOOL = new Bool();
-		public static readonly Int I32 = new Int();
-		public static readonly Class F32 = new Class("float", null, Array.Empty<Class>(), true);
-		public static readonly Str STR = new Str();
-		public static readonly Class STRING = new Class("char**", STR, Array.Empty<Class>(), true);
 
 		public static Dictionary<string, Token> Tokens = new() {
-			{"void",VOID },
-			{"bool",BOOL },
-			{"i32",I32 },
-			{"f32",F32 },
-			{"str",STR },
-			{"string",STRING },
-
-			{"print", new Func(null,new (Type Type,string Name)[]{(new Type(STR,false,false,false,false,false),"s") }){Name="printf", Included = true} }
+			{"void",VOID }
 		};
 
 		public static Dictionary<string, (Func<FileReader, PcreMatch, Class?, Func?, Token[], bool>, Func<FileReader, PcreMatch, Class?, Func?, Token[], Token>)> Regexs = new()
@@ -92,11 +81,93 @@ namespace RedRust
 			return new Type(c, !dontOwn, isRef, isNull, typedyn || dyn, !dyn);
 		}
 
+		private static System.Type[] Types = typeof(Program).Assembly.GetTypes();
+		private static IEnumerable<(System.Type Type, ClassAttribute Attribute)> InitClass()
+		{
+			foreach (var type in Types.Select(a =>
+									new { Type = a, Attribute = a.GetCustomAttribute<ClassAttribute>() }))
+			{
+				if (type.Attribute is null)
+					continue;
+
+				var c = new Class(type.Attribute.CName ?? type.Attribute.Name, null, Array.Empty<Class>(), type.Attribute.CName is not null);
+
+				Tokens.Add(type.Attribute.Name, c);
+
+				yield return (type.Type, type.Attribute);
+			}
+		}
+
 		public static void Main()
 		{
-			STR.Init();
-			I32.Init();
-			BOOL.Init();
+			foreach (var type in InitClass().ToList())
+			{
+				var v = type.Type.GetMethods().SingleOrDefault(m => m.Name.Equals("Variables"));
+				if (v is null)
+					throw new Exception();
+
+				if (!Tokens.TryGetValue(type.Attribute.Name, out Token? tc) || tc is not Class c)
+					throw new Exception();
+
+				foreach (Token t in new FileReader(((IEnumerable<string>)v.Invoke(null, null)!).ToArray())
+										.Parse(c, null, Array.Empty<Token>()))
+				{
+					if (t is not Declaration d)
+						throw new Exception();
+					c.Variables.Add(d);
+				}
+			}
+
+			foreach (var type in Types.SelectMany(a => a.GetMethods())
+								.Select(a => new { Method = a, Attribute = a.GetCustomAttribute<CastAttribute>() }))
+			{
+				if (type.Attribute is null)
+					continue;
+
+				if (type.Method.DeclaringType is null)
+					throw new Exception();
+
+				var c = type.Method.DeclaringType.GetCustomAttribute<ClassAttribute>();
+
+				if (c is null)
+					throw new Exception();
+
+				var t = type.Attribute.GetAction(type.Method);
+
+				GetClass(c.Name).Casts.Add(t.@return.Of, t.action);
+			}
+
+			foreach (var type in Types.SelectMany(a => a.GetMethods())
+								.Select(a => new { Method = a, Attribute = a.GetCustomAttribute<FuncAttribute>() }))
+			{
+				if (type.Attribute is null)
+					continue;
+
+				var t = type.Attribute.ApplyFunc();
+
+				var func = new Func(t.@return, t.@params, type.Attribute.CName is not null)
+				{ Name = type.Attribute.CName ?? type.Attribute.Name };
+
+				Class? cl = null;
+
+				var ca = type.Method.DeclaringType?.GetCustomAttribute<ClassAttribute>();
+
+				if (ca is not null && Tokens.TryGetValue(ca.Name, out Token? tc) && tc is Class c)
+				{
+					c.Funcs.Add(type.Attribute.Name, func);
+					cl = c;
+				}
+				else
+					Tokens.Add(type.Attribute.Name, func);
+
+				foreach (Token ta in new FileReader(((IEnumerable<string>)type.Method.Invoke(null, null)!).ToArray())
+										.Parse(cl, func, Array.Empty<Token>()))
+				{
+					if (ta is not Action a)
+						throw new Exception();
+					func.Actions.Add(a);
+				}
+			}
 
 			var lines = new FileReader(File.ReadAllLines(@"..\..\..\testRedRust\main.rr").Where(s => !string.IsNullOrWhiteSpace(s)).ToArray());
 

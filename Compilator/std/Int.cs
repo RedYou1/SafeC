@@ -1,45 +1,17 @@
-﻿using System.Diagnostics.CodeAnalysis;
-
-namespace RedRust
+﻿namespace RedRust
 {
-	public class IntToString : Action
+	[Class("i32", "int")]
+	public class Int
 	{
-		public Type ReturnType => new(Program.STR, true, false, false, false, false);
-
-		public string Name => throw new NotImplementedException();
-
-		public readonly Action Action;
-
-		public IntToString(Action action)
+		public static IEnumerable<string> Variables()
 		{
-			Action = action;
+			yield break;
 		}
 
-		public IEnumerable<string> Compile()
+		[Cast("str")]
+		public static IEnumerable<string> ToStr(string ob)
 		{
-			var a = Action.Compile();
-			foreach (var c in a.SkipLast(1))
-				yield return c;
-			yield return $"\"%i\", {a.Last()}";
-		}
-
-		public IEnumerable<Token> ToInclude()
-		{
-			yield return Program.STR;
-			foreach (var c in Action.ToInclude())
-				yield return c;
-		}
-	}
-
-	public class Int : Class
-	{
-		public Int() : base("int", null, Array.Empty<Class>(), true)
-		{
-		}
-
-		public void Init()
-		{
-			Casts.Add(Program.STR, (a) => new IntToString(a));
+			yield return $"\"%i\", {ob}";
 		}
 	}
 }

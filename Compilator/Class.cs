@@ -127,12 +127,12 @@ namespace RedRust
 			Type type = new Type(fromC, false, true, false, true, false);
 			var f = new Func(
 				new Type(Program.VOID, false, false, false, false, false),
-				(string.IsNullOrWhiteSpace(_params) ? Array.Empty<(Type Type, string Name)>()
+				(string.IsNullOrWhiteSpace(_params) ? Array.Empty<Parameter>()
 					: _params.Split(", ").Select(p =>
 					{
 						string[] p2 = p.Split(" ");
-						return (Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC), p2.Last());
-					})).Prepend((type, "this")).ToArray())
+						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC), p2.Last());
+					})).Prepend(new Parameter(type, "this")).ToArray())
 			{
 				Name = $"{fromC.Name}_Base_{name}_{id}"
 			};
@@ -151,11 +151,11 @@ namespace RedRust
 			type = new Type(fromC, true, false, false, false, false);
 			f = new Func(
 				type,
-				string.IsNullOrWhiteSpace(_params) ? Array.Empty<(Type Type, string Name)>()
+				string.IsNullOrWhiteSpace(_params) ? Array.Empty<Parameter>()
 					: _params.Split(", ").Select(p =>
 					{
 						string[] p2 = p.Split(" ");
-						return (Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC), p2.Last());
+						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC), p2.Last());
 					}).ToArray())
 			{
 				Name = $"{fromC.Name}_{name}_{id}"
