@@ -114,4 +114,8 @@ i32 main():
 
 	a.Add2(5)
 	Lock lock = new Lock(5, a)
+
+	u64 sl = a.id.Len()
+	print(sl)
+	print("\n")
 	return 0

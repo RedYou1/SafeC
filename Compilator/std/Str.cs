@@ -1,10 +1,19 @@
 ﻿
 namespace RedRust
 {
-	[Class("str", "char*")]
+	[Class("str", "char*", null, new string[0])]
 	public class Str
 	{
 		public static IEnumerable<string> Variables() { return Enumerable.Empty<string>(); }
+
+		[Func(
+			"Len", null,
+			"u64",
+			"str", "this")]
+		public static IEnumerable<string> Len()
+		{
+			yield return $"return StrLen(this)";
+		}
 
 		[Func(
 			"StartsWith", null,

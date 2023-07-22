@@ -106,10 +106,17 @@ namespace RedRust
 				yield break;
 			Included = true;
 
-			yield return $"typedef struct {Name} {{";
-			foreach (var v in AllVariables)
-				yield return $"\t{v.ReturnType} {v.Name}";
-			yield return $"}}{Name}";
+			if (AllVariables.Any())
+			{
+				yield return $"typedef struct {Name} {{";
+				foreach (var v in AllVariables)
+					yield return $"\t{v.ReturnType} {v.Name}";
+				yield return $"}}{Name}";
+			}
+			else
+			{
+				yield return $"typedef struct {Name} {Name}";
+			}
 		}
 
 		public static Func ConstructorDeclaration(FileReader lines, PcreMatch captures, Class? fromC, Func? fromF, Token[] from)

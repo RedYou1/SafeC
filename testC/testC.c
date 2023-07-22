@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+typedef struct INumber INumber;
 typedef struct A {
 	int a;
 }A;
@@ -117,6 +118,9 @@ Lock Lock_Lock_0(int l, Typed$A a) {
 	Add(this.a);
 	return this;
 }
+unsigned long Len(char* this) {
+	return strlen(this);
+}
 int main() {
 	A aa = A_A_0();
 	printf("%i", aa.a);
@@ -152,5 +156,8 @@ int main() {
 	printf("\n");
 	A_Add2(&a, 5);
 	Lock lock = Lock_Lock_0(5, C_to_Typed$A(&a));
+	unsigned long sl = Len(a.id);
+	printf("%lu", sl);
+	printf("\n");
 	return 0;
 }

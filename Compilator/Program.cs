@@ -82,7 +82,7 @@ namespace RedRust
 		}
 
 		private static System.Type[] Types = typeof(Program).Assembly.GetTypes();
-		private static IEnumerable<(System.Type Type, ClassAttribute Attribute)> InitClass()
+		private static IEnumerable<(System.Type Type, ClassAttribute Attribute, Class Class)> InitClass()
 		{
 			foreach (var type in Types.Select(a =>
 									new { Type = a, Attribute = a.GetCustomAttribute<ClassAttribute>() }))
@@ -94,7 +94,7 @@ namespace RedRust
 
 				Tokens.Add(type.Attribute.Name, c);
 
-				yield return (type.Type, type.Attribute);
+				yield return (type.Type, type.Attribute, c);
 			}
 		}
 
@@ -102,6 +102,14 @@ namespace RedRust
 		{
 			foreach (var type in InitClass().ToList())
 			{
+				if (type.Attribute.Extends is not null)
+				{
+					type.Class.Extends = GetClass(type.Attribute.Extends);
+					type.Class.Extends.Childs.Child.Add(type.Class);
+				}
+
+				type.Class.Implements = type.Attribute.Implements.Select(GetClass).ToArray();
+
 				var v = type.Type.GetMethods().SingleOrDefault(m => m.Name.Equals("Variables"));
 				if (v is null)
 					throw new Exception();
