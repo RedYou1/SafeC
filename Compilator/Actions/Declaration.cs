@@ -26,17 +26,17 @@ namespace RedRust
 			Action = action;
 		}
 
-		public static Declaration Declaration_(FileReader lines, PcreMatch captures, Class? fromC, Func? fromF, Token[] from)
+		public static Declaration Declaration_(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromC is null && fromF is null)
 				throw new Exception();
 
-			var r = Program.GetType(captures[1], fromC);
+			var r = Program.GetType(captures[1], fromC, gen);
 
 			Action? current = null;
 			if (!string.IsNullOrEmpty(captures[13]))
 			{
-				current = new FileReader(captures[13].Value).Parse(fromC, fromF, from).First() as Action;
+				current = new FileReader(captures[13].Value).Parse(fromC, fromF, gen, from).First() as Action;
 				if (current is null)
 				{
 					throw new Exception();

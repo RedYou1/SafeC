@@ -2,20 +2,20 @@
 
 namespace RedRust
 {
-	public class Class : Token, IEquatable<Class>
+	public class Class : IClass, IEquatable<Class>
 	{
 		protected bool Included;
 
 		public string Name { get; }
 
-		public Class? Extends;
-		public Class[] Implements;
+		public Class? Extends { get; set; }
+		public Class[] Implements { get; set; }
 
 		public Dictionary<Class, Func<Action, Action>> Casts = new();
 
 		public readonly List<Declaration> Variables = new();
-		public readonly Dictionary<string, Func> Funcs = new();
-		public readonly List<Func> Constructors = new();
+		public readonly Dictionary<string, IFunc> Funcs = new();
+		public readonly List<IFunc> Constructors = new();
 
 		public IEnumerable<Declaration> AllVariables
 		{
@@ -29,7 +29,7 @@ namespace RedRust
 			}
 		}
 
-		private IEnumerable<(string, Func)> AllFuncs_Enum
+		private IEnumerable<(string, IFunc)> AllFuncs_Enum
 		{
 			get
 			{
@@ -40,11 +40,11 @@ namespace RedRust
 						yield return f;
 			}
 		}
-		public Dictionary<string, Func> AllFuncs => AllFuncs_Enum
+		public Dictionary<string, IFunc> AllFuncs => AllFuncs_Enum
 			.GroupBy(p => p.Item1, StringComparer.OrdinalIgnoreCase)
 			.ToDictionary(g => g.Key, g => g.First().Item2, StringComparer.OrdinalIgnoreCase);
 
-		public readonly TypeDyn Childs;
+		public List<IClass> Childs { get; } = new();
 
 		public Class(string name, Class? extends, Class[] implements, bool included = false)
 		{
@@ -53,38 +53,57 @@ namespace RedRust
 			Implements = implements;
 			Included = included;
 
-			if (this is not TypeDyn)
-				Childs = new(this);
-			else
-				Childs = null!;
-			extends?.Childs.Child.Add(this);
+			if (!included && !Name.Equals("void") && !Name.Equals("Classes"))
+				Program.Classes.Options.Add(Name);
+			extends?.Childs.Add(this);
 		}
 
-		public static Class Declaration(FileReader lines, PcreMatch captures, Class? fromC, Func? fromF, Token[] from)
+		public static IClass Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromC is not null || fromF is not null || from.Any())
 				throw new Exception();
 
 			string[] m = captures[7].Value.Trim().Split(", ");
-			var c = new Class(
-				captures[2],
-				string.IsNullOrWhiteSpace(m[0]) ? null : Program.GetClass(m[0]),
-				m.Skip(1).Select(Program.GetInterface).ToArray());
+			string name = captures[2];
+
+			IClass c;
+
+			if (name.EndsWith('>'))
+			{
+				var i = name.IndexOf('<');
+				c = new GenericClass(name.Substring(0, i), name.Substring(i + 1, name.Length - i - 2).Split(", "), null, Array.Empty<Class>());
+			}
+			else
+			{
+				c = new Class(
+					captures[2],
+					string.IsNullOrWhiteSpace(m[0]) ? null : IClass.IsClass(Program.GetClass(m[0], gen)),
+					m.Skip(1).Select(Program.GetInterface).ToArray());
+			}
+
 			Program.Tokens.Add(c.Name, c);
 
-			foreach (var t in lines.Extract().Parse(c, null, Array.Empty<Token>()))
+			var fr = lines.Extract();
+
+			IEnumerable<Declaration> Implement(Class cc, Dictionary<string, Class>? gen)
 			{
-				switch (t)
+				fr.Reset();
+				foreach (var t in fr.Parse(cc, null, gen, Array.Empty<Token>()))
 				{
-					case Func func:
-						break;
-					case Declaration d:
-						c.Variables.Add(d);
-						break;
-					default:
-						throw new Exception();
+					if (t is Declaration d)
+						yield return d;
 				}
 			}
+
+			if (c is Class cc)
+				foreach (Declaration d in Implement(cc, null))
+					cc.Variables.Add(d);
+			else if (c is GenericClass gc)
+				gc.Variables = Implement;
+			else
+				throw new Exception();
+
+
 
 			return c;
 		}
@@ -119,9 +138,9 @@ namespace RedRust
 			}
 		}
 
-		public static Func ConstructorDeclaration(FileReader lines, PcreMatch captures, Class? fromC, Func? fromF, Token[] from)
+		public static Func ConstructorDeclaration(FileReader lines, PcreMatch captures, IClass? fromIC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
-			if (fromC is null)
+			if (fromIC is not Class fromC)
 				throw new Exception();
 
 			string name = captures[1];
@@ -138,14 +157,14 @@ namespace RedRust
 					: _params.Split(", ").Select(p =>
 					{
 						string[] p2 = p.Split(" ");
-						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC), p2.Last());
+						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
 					})).Prepend(new Parameter(type, "this")).ToArray())
 			{
 				Name = $"{fromC.Name}_Base_{name}_{id}"
 			};
 			fromC.Constructors.Add(f);
 
-			foreach (var t in fr.Parse(fromC, f, from))
+			foreach (var t in fr.Parse(fromC, f, gen, from))
 			{
 				if (t is not Action a)
 					throw new Exception();
@@ -162,7 +181,7 @@ namespace RedRust
 					: _params.Split(", ").Select(p =>
 					{
 						string[] p2 = p.Split(" ");
-						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC), p2.Last());
+						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
 					}).ToArray())
 			{
 				Name = $"{fromC.Name}_{name}_{id}"
@@ -173,7 +192,7 @@ namespace RedRust
 
 			f.Actions.Add(new Declaration(type, null) { Name = "this" });
 
-			foreach (var t in fr.Parse(fromC, f, from))
+			foreach (var t in fr.Parse(fromC, f, gen, from))
 			{
 				if (t is not Action a)
 					throw new Exception();

@@ -30,11 +30,11 @@
 			CanCallFunc = canCallFunc;
 		}
 
-		private bool Convert(Class other)
+		private bool Convert(IClass other)
 		{
 			if (CanBeChild)
 			{
-				foreach (Class c in Of.Childs.AllChild)
+				foreach (Class c in IClass.AllChilds(Of))
 					if (c.Equals(other))
 						return true;
 			}
@@ -44,7 +44,7 @@
 			return false;
 		}
 
-		public IEnumerable<Action>? Convert(Action other, Func from)
+		public IEnumerable<Action>? Convert(Action other, Func from, Dictionary<string, Class>? gen)
 		{
 			Object? ob = other as Object;
 
@@ -74,7 +74,7 @@
 					return null;
 
 			if (other.ReturnType.Of.Casts.TryGetValue(Of, out Func<Action, Action>? a) && a is not null)
-				return Convert(a(other), from);
+				return Convert(a(other), from, gen);
 
 			if (!Convert(other.ReturnType.Of))
 				return null;
@@ -82,8 +82,25 @@
 
 			if (DynTyped && !other.ReturnType.Ref)
 			{
-				var f = Of.Childs.GetConverter(other.ReturnType.Of);
-				var args = f.CanCall(from, other);
+				Class ig = IClass.IsClass(Program.GetClass($"Typed<{Of.Name}>", gen));
+
+				Dictionary<string, Class> gen2 = new()
+				{
+					{ "V", other.ReturnType.Of }
+				};
+
+				var f = ig.Constructors.ToList().Select(c =>
+				{
+					if (c is GenericFunc gf)
+						return gf.CanCall(from, gen2, other);
+					else if (c is Func f)
+						return f.CanCall(from, gen, other);
+					else
+						throw new Exception();
+				}).Where(c => c is not null).ToArray();
+
+				if (f.Length != 1)
+					throw new Exception();
 
 				if (Ref && Own)
 				{
@@ -91,10 +108,7 @@
 						throw new Exception();
 					ob.Own = false;
 				}
-
-				if (args is null)
-					throw new Exception();
-				return new Action[] { new CallFunction(f, args) };
+				return new Action[] { new CallFunction(f[0]!.Func, f[0]!.Args) };
 			}
 
 			if (Ref && Own)
@@ -140,8 +154,13 @@
 		public IEnumerable<Token> ToInclude()
 		{
 			if (DynTyped)
-				yield return Of.Childs;
-			yield return Of;
+			{
+				yield return Program.GetClass($"Typed<{Of.Name}>", null);
+				foreach (Class c in IClass.AllChilds(Of))
+					yield return c;
+			}
+			else
+				yield return Of;
 		}
 
 		public override string ToString()

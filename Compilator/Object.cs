@@ -59,32 +59,46 @@ namespace RedRust
 			_Null = ReturnType.Null;
 		}
 
-		public static Object Declaration(FileReader lines, PcreMatch captures, Class? fromC, Func? fromF, Token[] from)
+		public static Object Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromF is null)
 				throw new Exception();
 
-			if (lines.Current!.Equals("null"))
+			if (lines.Current!.Line.Equals("null"))
 				return new Object(new(Program.VOID, false, false, true, false, false), "0");
 
-			string[] s = lines.Current!.Split('.');
-			Object o = fromF.Objects[s[0]];
-			foreach (string s2 in s.Skip(1))
+			string[] s = lines.Current!.Line.Split('.');
+
+			if (fromF.Objects.TryGetValue(s[0], out var o) && o is not null)
 			{
-				o = o.Objects[s2];
+				foreach (string s2 in s.Skip(1))
+				{
+					o = o.Objects[s2];
+				}
+
+				return o;
 			}
 
-			return o;
+			if (s.Length != 2)
+				throw new Exception();
+
+			if (Program.Tokens.TryGetValue(s[0], out var ic) &&
+				ic is Enum e && e.Options.Contains(s[1]))
+			{
+				return new Object(new Type(e, true, false, false, false, true), $"{e.Name}${s[1]}");
+			}
+
+			throw new Exception();
 		}
 
-		public static Object MathDeclaration(FileReader lines, PcreMatch captures, Class? fromC, Func? fromF, Token[] from)
+		public static Object MathDeclaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
-			Object o1 = new FileReader(captures[1]).Parse(fromC, fromF, from).Cast<Object>().First();
+			Object o1 = new FileReader(captures[1].Value).Parse(fromC, fromF, gen, from).Cast<Object>().First();
 			string op = captures[7];
-			Object o2 = new FileReader(captures[8]).Parse(fromC, fromF, from).Cast<Object>().First();
+			Object o2 = new FileReader(captures[8].Value).Parse(fromC, fromF, gen, from).Cast<Object>().First();
 
-			Class f32 = Program.GetClass("f32");
-			Class i32 = Program.GetClass("i32");
+			Class f32 = IClass.IsClass(Program.GetClass("f32", gen));
+			Class i32 = IClass.IsClass(Program.GetClass("i32", gen));
 
 			return new Object(new(o1.ReturnType.Of == f32 || o2.ReturnType.Of == f32 ? f32 : i32, true, false, false, false, false),
 				$"{o1.Name} {op} {o2.Name}");

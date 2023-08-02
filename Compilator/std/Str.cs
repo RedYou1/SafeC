@@ -4,13 +4,13 @@ namespace RedRust
 	[Class("str", "char*", null, new string[0])]
 	public class Str
 	{
-		public static IEnumerable<string> Variables() { return Enumerable.Empty<string>(); }
+		public static IEnumerable<StdLine> Variables() { return Enumerable.Empty<StdLine>(); }
 
 		[Func(
 			"Len", null,
 			"u64",
 			"str", "this")]
-		public static IEnumerable<string> Len()
+		public static IEnumerable<StdLine> Len()
 		{
 			yield return $"return StrLen(this)";
 		}
@@ -20,7 +20,7 @@ namespace RedRust
 			"bool",
 			"str", "this",
 			"str", "s")]
-		public static IEnumerable<string> StartsWith()
+		public static IEnumerable<StdLine> StartsWith()
 		{
 			yield break;
 		}

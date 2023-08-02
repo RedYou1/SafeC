@@ -6,12 +6,12 @@
 			"print", "printf",
 			"void",
 			"str", "s")]
-		public static IEnumerable<string> print() { return Enumerable.Empty<string>(); }
+		public static IEnumerable<StdLine> print() { return Enumerable.Empty<StdLine>(); }
 
 		[Func(
 			"StrLen", "strlen",
 			"u64",
 			"str", "this")]
-		public static IEnumerable<string> StrLen() { return Enumerable.Empty<string>(); }
+		public static IEnumerable<StdLine> StrLen() { return Enumerable.Empty<StdLine>(); }
 	}
 }

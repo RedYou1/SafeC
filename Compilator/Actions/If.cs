@@ -14,7 +14,7 @@ namespace RedRust
 
 		private string condition = string.Empty;
 
-		public static If Declaration(FileReader lines, PcreMatch captures, Class? fromC, Func? fromF, Token[] from)
+		public static If Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromF is null)
 				throw new Exception();
@@ -41,7 +41,7 @@ namespace RedRust
 				if (ss.Length != 2)
 					throw new Exception();
 
-				obj = new FileReader(ss[0]).Parse(fromC, fromF, from).Cast<Object>().First();
+				obj = new FileReader(ss[0]).Parse(fromC, fromF, gen, from).Cast<Object>().First();
 
 				if (ss[1].Equals("null"))
 				{
@@ -70,9 +70,9 @@ namespace RedRust
 					string[] c = ss[1].Split(" ");
 
 					_class = obj.Of;
-					obj.Of = Program.GetClass(c[0]);
+					obj.Of = IClass.IsClass(Program.GetClass(c[0], gen));
 
-					f.condition = $"{obj.Name}.type {(not_class ? "!" : "=")}= Extend${_class.Name}${obj.Of.Name}";
+					f.condition = $"{obj.Name}.type {(not_class ? "!" : "=")}= Classes${obj.Of.Name}";
 
 					if (!not_class)
 					{
@@ -92,7 +92,7 @@ namespace RedRust
 			else if (!captures.Value.Equals("else:"))
 				throw new Exception();
 
-			foreach (var t in lines.Extract().Parse(fromC, fromF, from.Append(f).ToArray()))
+			foreach (var t in lines.Extract().Parse(fromC, fromF, gen, from.Append(f).ToArray()))
 			{
 				if (t is not Action a)
 					throw new Exception();

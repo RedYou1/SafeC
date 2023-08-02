@@ -2,19 +2,7 @@
 
 namespace RedRust
 {
-	public class Parameter
-	{
-		public readonly Type Type;
-		public readonly string Name;
-
-		public Parameter(Type type, string name)
-		{
-			Type = type;
-			Name = name;
-		}
-	}
-
-	public class Func : Token
+	public class Func : IFunc
 	{
 		public bool Included { get; set; }
 
@@ -37,13 +25,13 @@ namespace RedRust
 			}
 		}
 
-		public static Func Declaration(FileReader lines, PcreMatch captures, Class? fromC, Func? fromF, Token[] from)
+		public static Func Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromF is not null || from.Any())
 				throw new Exception();
 
 			string returnTypeString = captures[1];
-			Type returnType = Program.GetType(returnTypeString, fromC);
+			Type returnType = Program.GetType(returnTypeString, fromC, gen);
 
 			string _params = captures[13];
 
@@ -56,19 +44,20 @@ namespace RedRust
 						string[] p2 = p.Split(" ");
 						if (p2.Last().Contains("this"))
 							p2 = p2.Append("this").ToArray();
-						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC), p2.Last());
+						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
 					}).ToArray())
 			{
 				Name = $"{(fromC is null ? "" : $"{fromC.Name}_")}{fRawName}"
 			};
 
-			if (fromC is null)
-				Program.Tokens.Add(fRawName, f);
+			if (fromC is Class c)
+				c.Funcs.Add(fRawName, f);
 			else
-				fromC.Funcs.Add(fRawName, f);
+				Program.Tokens.Add(fRawName, f);
 
 
-			foreach (var t in lines.Extract().Parse(fromC, f, Array.Empty<Token>()))
+
+			foreach (var t in lines.Extract().Parse(fromC, f, gen, Array.Empty<Token>()))
 			{
 				if (t is not Action a)
 					throw new Exception();
@@ -78,7 +67,7 @@ namespace RedRust
 			return f;
 		}
 
-		public IEnumerable<Action>[]? CanCall(Func from, params Action[] args)
+		public IFunc.CanCallReturn? CanCall(Func from, Dictionary<string, Class>? gen, params Action[] args)
 		{
 			if (Params.Length != args.Length)
 				return null;
@@ -87,11 +76,11 @@ namespace RedRust
 
 			for (int i = 0; i < Params.Length; i++)
 			{
-				converts[i] = Params[i].Type.Convert(args[i], from)!;
+				converts[i] = Params[i].Type.Convert(args[i], from, gen)!;
 				if (converts[i] is null)
 					return null;
 			}
-			return converts;
+			return new(this, converts);
 		}
 
 		public IEnumerable<Token> ToInclude()
@@ -110,7 +99,7 @@ namespace RedRust
 					yield return t;
 		}
 
-		public virtual IEnumerable<string> Compile()
+		public IEnumerable<string> Compile()
 		{
 			if (Included)
 				yield break;

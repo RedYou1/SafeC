@@ -3,10 +3,10 @@
 	[Class("i16", "short", null, new string[] { "INumber" })]
 	public class Short
 	{
-		public static IEnumerable<string> Variables() { return Enumerable.Empty<string>(); }
+		public static IEnumerable<StdLine> Variables() { return Enumerable.Empty<StdLine>(); }
 
 		[Cast("str")]
-		public static IEnumerable<string> ToStr(string ob)
+		public static IEnumerable<StdLine> ToStr(string ob)
 		{
 			yield return $"\"%i\", {ob}";
 		}

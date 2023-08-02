@@ -15,18 +15,18 @@ namespace RedRust
 			Actions = actions;
 		}
 
-		public static Asign Declaration(FileReader lines, PcreMatch captures, Class? fromC, Func? fromF, Token[] from)
+		public static Asign Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromF is null)
 				throw new Exception();
 
-			Object ob = new FileReader(captures[1]).Parse(fromC, fromF, from).Cast<Object>().First();
+			Object ob = new FileReader(captures[1].Value).Parse(fromC, fromF, gen, from).Cast<Object>().First();
 
 			if (!ob.Own)
 				throw new Exception();
 
-			Action a = new FileReader(captures[5]).Parse(fromC, fromF, from).Cast<Action>().First();
-			IEnumerable<Action>? c = ob.ReturnType.Convert(a, fromF);
+			Action a = new FileReader(captures[5].Value).Parse(fromC, fromF, gen, from).Cast<Action>().First();
+			IEnumerable<Action>? c = ob.ReturnType.Convert(a, fromF, gen);
 
 			if (c is null)
 				throw new Exception();

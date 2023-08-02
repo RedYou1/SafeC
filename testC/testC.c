@@ -10,25 +10,37 @@ A A_A_0() {
 	this.a = 1;
 	return this;
 }
-typedef enum Extend$A {
-	Extend$A$A,
-	Extend$A$C,
-}Extend$A;
+typedef enum Classes {
+	Classes$INumber,
+	Classes$Colors,
+	Classes$A,
+	Classes$B,
+	Classes$C,
+	Classes$Lock,
+	Classes$Typed$A,
+}Classes;
 typedef struct Typed$A {
 	A* ptr;
-	Extend$A type;
+	Classes type;
 }Typed$A;
-void A_Add(A* this) {
-	this->a = this->a + 1;
-}
+typedef enum Colors {
+	Colors$blue,
+	Colors$red,
+	Colors$yellow,
+	Colors$green,
+}Colors;
 typedef struct B {
 	char* b;
+	Colors color;
 }B;
 typedef struct C {
 	int a;
 	char* id;
 	B b;
 }C;
+void A_Add(A* this) {
+	this->a = this->a + 1;
+}
 void B_Print(B* this) {
 	printf("Hello World {");
 	if (this == 0) {
@@ -36,12 +48,14 @@ void B_Print(B* this) {
 	}
 	else {
 		printf(this->b);
+		printf(", ");
+		printf("%i", this->color);
 	}
 	printf("}\n");
 }
 void Add(Typed$A a) {
 	A_Add(a.ptr);
-	if (a.type == Extend$A$C) {
+	if (a.type == Classes$C) {
 		C* c = a.ptr;
 		B b = c->b;
 		B_Print(&b);
@@ -51,10 +65,10 @@ void Add(Typed$A a) {
 		printf("add is not type C\n");
 	}
 }
-Typed$A A_to_Typed$A(A* t) {
+Typed$A Typed$A$A(A* ptr) {
 	Typed$A this;
-	this.ptr = t;
-	this.type = Extend$A$A;
+	this.ptr = ptr;
+	this.type = Classes$A;
 	return this;
 }
 void TakeOwner(A a) {
@@ -64,16 +78,17 @@ void TakeOwner(A a) {
 void A_Base_A_1(A* this, int a) {
 	this->a = a;
 }
-B B_B_0() {
+B B_B_0(Colors color) {
 	B this;
 	this.b = "Allo";
+	this.color = color;
 	return this;
 }
 C C_C_1(int a, char* id) {
 	C this;
 	A_Base_A_1(&this, a);
 	this.id = id;
-	this.b = B_B_0();
+	this.b = B_B_0(Colors$yellow);
 	return this;
 }
 void A_Base_A_0(A* this) {
@@ -83,7 +98,7 @@ C C_C_0(char* id) {
 	C this;
 	A_Base_A_0(&this);
 	this.id = id;
-	this.b = B_B_0();
+	this.b = B_B_0(Colors$green);
 	return this;
 }
 C createC(int* a, char* id) {
@@ -92,17 +107,17 @@ C createC(int* a, char* id) {
 	}
 	return C_C_0(id);
 }
-Typed$A C_to_Typed$A(C* t) {
+Typed$A Typed$A$C(C* ptr) {
 	Typed$A this;
-	this.ptr = t;
-	this.type = Extend$A$C;
+	this.ptr = ptr;
+	this.type = Classes$C;
 	return this;
 }
 void A_Add2(A* this, int b) {
 	this->a = this->a + b;
 }
-B createB() {
-	B b = B_B_0();
+B createB(Colors color) {
+	B b = B_B_0(color);
 	return b;
 }
 char StartsWith(char* this, char* s) {
@@ -125,14 +140,14 @@ int main() {
 	A aa = A_A_0();
 	printf("%i", aa.a);
 	printf("\n");
-	Add(A_to_Typed$A(&aa));
+	Add(Typed$A$A(&aa));
 	TakeOwner(aa);
 	C a = createC(0, "ID");
 	printf(a.id);
 	printf(":\n");
 	printf("%i", a.a);
 	printf("\n");
-	Add(C_to_Typed$A(&a));
+	Add(Typed$A$C(&a));
 	printf("%i", a.a);
 	printf("\n");
 	int _0 = 5;
@@ -148,14 +163,17 @@ int main() {
 	printf("\n");
 	B* b = 0;
 	B_Print(b);
-	B _2 = createB();
+	B _2 = createB(Colors$blue);
 	b = &_2;
+	B_Print(b);
+	B _3 = createB(Colors$red);
+	b = &_3;
 	B_Print(b);
 	char start = StartsWith(a.id, "ID2");
 	printf(start ? "True" : "False");
 	printf("\n");
 	A_Add2(&a, 5);
-	Lock lock = Lock_Lock_0(5, C_to_Typed$A(&a));
+	Lock lock = Lock_Lock_0(5, Typed$A$C(&a));
 	unsigned long sl = Len(a.id);
 	printf("%lu", sl);
 	printf("\n");

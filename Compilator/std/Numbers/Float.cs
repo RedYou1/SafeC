@@ -3,10 +3,10 @@
 	[Class("f32", "float", null, new string[] { "INumber" })]
 	internal class Float
 	{
-		public static IEnumerable<string> Variables() { return Enumerable.Empty<string>(); }
+		public static IEnumerable<StdLine> Variables() { return Enumerable.Empty<StdLine>(); }
 
 		[Cast("str")]
-		public static IEnumerable<string> ToStr(string ob)
+		public static IEnumerable<StdLine> ToStr(string ob)
 		{
 			yield return $"\"%f\", {ob}";
 		}
