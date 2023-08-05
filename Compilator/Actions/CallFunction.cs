@@ -64,7 +64,7 @@ namespace RedRust
 			if (f is null)
 				throw new Exception();
 
-			Action[] args = new FileReader(getArgs(captures[5]).ToStdLine().ToArray()).Parse(fromC, fromF, gen, from)
+			Action[] args = new FileReader(getArgs(captures[9]).ToStdLine().ToArray()).Parse(fromC, fromF, gen, from)
 				.Cast<Action>().ToArray();
 			if (ob is not null)
 				args = args.Prepend(ob).ToArray();
@@ -99,20 +99,36 @@ namespace RedRust
 			if (fromF is null)
 				throw new Exception();
 
-			Action[] args = new FileReader(getArgs(captures[9]).ToStdLine().ToArray()).Parse(fromC, fromF, gen, from).Cast<Action>().ToArray();
-
-
-			string gen2s = captures[1];
-			Dictionary<string, Class>? gen2 = null;
-			if (!string.IsNullOrEmpty(gen2s))
-			{
-				gen2 = gen is null ? new() : new(gen);
-				foreach (string c in gen2s.Split(", "))
-					gen2.Add(c, IClass.IsClass(Program.GetClass(c, gen)));
-			}
-
 			Class @class = IClass.IsClass(Program.GetClass(captures[4], gen));
-			var func = @class.Constructors.Select(c => c.CanCall(fromF, gen2, args)).Where(c => c is not null).ToArray();
+
+			//string gensClass = captures[7];
+
+			string tgensConstructor = captures[2];
+
+			string[] gensConstructor = string.IsNullOrEmpty(tgensConstructor) ?
+				Array.Empty<string>() : tgensConstructor.Split(", ");
+
+			Dictionary<string, Class>? gens = gen is null ? null : new(gen);
+
+			var func = @class.Constructors.Select(c =>
+			{
+				Dictionary<string, Class>? gen3 = gens is null ? null : new(gens);
+				if (c is GenericFunc gf)
+				{
+					if (gensConstructor.Length != gf.GenNames.Length)
+						throw new Exception();
+					if (gen3 is null)
+						gen3 = new();
+					for (int i = 0; i < gf.GenNames.Length; i++)
+						gen3.Add(gf.GenNames[i], IClass.IsClass(Program.GetClass(gensConstructor[i], gen)));
+				}
+				else if (c is not RedRust.Func)
+					throw new Exception();
+
+				Action[] args = new FileReader(getArgs(captures[9]).ToStdLine().ToArray()).Parse(fromC, fromF, gen3, from).Cast<Action>().ToArray();
+
+				return c.CanCall(fromF, gen3, args);
+			}).Where(c => c is not null).ToArray();
 
 			if (func.Length != 1)
 				throw new Exception();

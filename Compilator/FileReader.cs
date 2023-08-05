@@ -5,8 +5,8 @@ namespace RedRust
 {
 	public class FileReader : IEnumerable<string>
 	{
-		private readonly StdLine[] Lines;
-		private int Line;
+		public readonly StdLine[] Lines;
+		public int Line;
 
 		public StdLine? Current
 		{
@@ -23,11 +23,6 @@ namespace RedRust
 		public FileReader(params StdLine[] lines)
 		{
 			Lines = lines;
-			Line = 0;
-		}
-
-		public void Reset()
-		{
 			Line = 0;
 		}
 

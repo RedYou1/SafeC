@@ -65,20 +65,20 @@ namespace RedRust
 
 			string[] m = captures[7].Value.Trim().Split(", ");
 			string name = captures[2];
+			string gens = captures[4];
 
 			IClass c;
 
-			if (name.EndsWith('>'))
-			{
-				var i = name.IndexOf('<');
-				c = new GenericClass(name.Substring(0, i), name.Substring(i + 1, name.Length - i - 2).Split(", "), null, Array.Empty<Class>());
-			}
-			else
+			if (string.IsNullOrEmpty(gens))
 			{
 				c = new Class(
 					captures[2],
 					string.IsNullOrWhiteSpace(m[0]) ? null : IClass.IsClass(Program.GetClass(m[0], gen)),
 					m.Skip(1).Select(Program.GetInterface).ToArray());
+			}
+			else
+			{
+				c = new GenericClass(name, gens.Split(", "), null, Array.Empty<Class>());
 			}
 
 			Program.Tokens.Add(c.Name, c);
@@ -87,7 +87,7 @@ namespace RedRust
 
 			IEnumerable<Declaration> Implement(Class cc, Dictionary<string, Class>? gen)
 			{
-				fr.Reset();
+				fr.Line = 0;
 				foreach (var t in fr.Parse(cc, null, gen, Array.Empty<Token>()))
 				{
 					if (t is Declaration d)
@@ -138,68 +138,107 @@ namespace RedRust
 			}
 		}
 
-		public static Func ConstructorDeclaration(FileReader lines, PcreMatch captures, IClass? fromIC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
+		public static IFunc ConstructorDeclaration(FileReader lines, PcreMatch captures, IClass? fromIC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromIC is not Class fromC)
 				throw new Exception();
 
-			string name = captures[1];
-			string _params = captures[3];
+			string name = captures[2];
+			string gens = captures[4];
+			string[] _params = captures[6].Value.Split(", ");
 
 			var fr = lines.Extract();
 			int id = fromC.Constructors.Count / 2;
 
 			//Base
+			string fname = $"{fromC.Name}_Base_{name}_{id}";
 			Type type = new Type(fromC, false, true, false, true, false);
-			var f = new Func(
-				new Type(Program.VOID, false, false, false, false, false),
-				(string.IsNullOrWhiteSpace(_params) ? Array.Empty<Parameter>()
-					: _params.Split(", ").Select(p =>
+			IFunc f;
+			if (string.IsNullOrEmpty(gens))
+			{
+				f = new Func(new Type(Program.VOID, false, false, false, false, false),
+					(string.IsNullOrWhiteSpace(_params[0]) ? Array.Empty<Parameter>()
+						: _params.Select(p =>
+						{
+							string[] p2 = p.Split(" ");
+							return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
+						})).Prepend(new Parameter(type, "this")).ToArray())
+				{
+					Name = fname
+				};
+
+				foreach (var t in fr.Parse(fromC, (Func)f, gen, from))
+				{
+					if (t is not Action a)
+						throw new Exception();
+					((Func)f).Actions.Add(a);
+				}
+				fr.Line = 0;
+			}
+			else
+				f = new GenericFunc(fromC, fname, (string.IsNullOrWhiteSpace(_params[0]) ? 0 : _params.Length) + 1,
+					gen, gens.Split(", "),
+					_ =>
+					{
+						fr.Line = 0;
+						return fr;
+					},
+					_ => type,
+					gen2 => _params.Select(p =>
 					{
 						string[] p2 = p.Split(" ");
-						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
-					})).Prepend(new Parameter(type, "this")).ToArray())
-			{
-				Name = $"{fromC.Name}_Base_{name}_{id}"
-			};
+						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
+					}).Prepend(new Parameter(type, "this")).ToArray());
+
 			fromC.Constructors.Add(f);
 
-			foreach (var t in fr.Parse(fromC, f, gen, from))
-			{
-				if (t is not Action a)
-					throw new Exception();
-				f.Actions.Add(a);
-			}
-
-			fr.Reset();
 
 			//New
-			type = new Type(fromC, true, false, false, false, false);
-			f = new Func(
-				type,
-				string.IsNullOrWhiteSpace(_params) ? Array.Empty<Parameter>()
-					: _params.Split(", ").Select(p =>
+			fname = $"{fromC.Name}_{name}_{id}";
+			type = new Type(fromC, true, false, false, false, true);
+			if (string.IsNullOrEmpty(gens))
+			{
+				f = new Func(
+					type,
+					string.IsNullOrWhiteSpace(_params[0]) ? Array.Empty<Parameter>()
+						: _params.Select(p =>
+						{
+							string[] p2 = p.Split(" ");
+							return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
+						}).ToArray())
+				{
+					Name = fname
+				};
+				((Func)f).Objects.Add("this", new(type, "this"));
+
+				((Func)f).Actions.Add(new Declaration(type, null) { Name = "this" });
+				foreach (var t in fr.Parse(fromC, (Func)f, gen, from))
+				{
+					if (t is not Action a)
+						throw new Exception();
+					((Func)f).Actions.Add(a);
+				}
+				((Func)f).Actions.Add(new Return(((Func)f).Objects["this"]));
+			}
+			else
+			{
+				FileReader fr2 = new(fr.Lines.Prepend(new($"{fromC.Name} this", func => func.Objects.Add("this", new(type, "this")))).Append("return this").ToArray());
+				f = new GenericFunc(fromC, fname, string.IsNullOrWhiteSpace(_params[0]) ? 0 : _params.Length,
+					gen, gens.Split(", "),
+					_ =>
+					{
+						fr2.Line = 0;
+						return fr2;
+					},
+					_ => type,
+					gen2 => _params.Select(p =>
 					{
 						string[] p2 = p.Split(" ");
-						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
-					}).ToArray())
-			{
-				Name = $"{fromC.Name}_{name}_{id}"
-			};
-			f.Objects.Add("this", new(type, "this"));
-
-			fromC.Constructors.Add(f);
-
-			f.Actions.Add(new Declaration(type, null) { Name = "this" });
-
-			foreach (var t in fr.Parse(fromC, f, gen, from))
-			{
-				if (t is not Action a)
-					throw new Exception();
-				f.Actions.Add(a);
+						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
+					}).ToArray());
 			}
 
-			f.Actions.Add(new Return(f.Objects["this"]));
+			fromC.Constructors.Add(f);
 
 			return f;
 		}

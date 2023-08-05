@@ -11,9 +11,9 @@ namespace RedRust
 		public const string ENUMDEFREGEX = $@"^enum {DEFNAMEREGEX}:$";
 		public const string TYPEREGEX = $@"(?'tp'(\*|\&|(\*dyn )|(\*typedyn )|(\&typedyn )){{0,1}}{DEFNAMEREGEX}\?{{0,1}})";
 		public const string FUNCDEFREGEX = $@"^{TYPEREGEX} ((?&cl))\((((((\*|\&|(\*dyn )|(\*typedyn )|(\&typedyn )){{0,1}}this\?{{0,1}})|((?&tp) (?&nm)))(, (?&tp) (?&nm))*){{0,1}})\):$";
-		public const string CONSTRUCTORDEFREGEX = $@"^([a-zA-Z]{{1}}[a-zA-Z0-9]*)\((({TYPEREGEX} (?&nm)(, (?&tp) (?&nm))*){{0,1}})\):$";
+		public const string CONSTRUCTORDEFREGEX = $@"^{DEFNAMEREGEX}\((((?'tp'(\*|\&|(\*dyn )|(\*typedyn )|(\&typedyn )){{0,1}}(?&cl)\?{{0,1}}) (?&nm)(, (?&tp) (?&nm))*){{0,1}})\):$";
 		public const string DECLARATIONREGEX = $@"^{TYPEREGEX} ((?&nm))( = (.+)){{0,1}}$";
-		public const string GETVARREGEX = $@"(?'var'{NAMEREGEX}(\.(?&nm))*)";
+		public const string GETVARREGEX = $@"(?'var'{DEFNAMEREGEX}(\.(?&cl))*)";
 		public const string ASIGNREGEX = $@"^({GETVARREGEX}) = (.+)$";
 		public const string CALLFUNCREGEX = $@"^({GETVARREGEX})\((.*)\)$";
 		public const string BASEREGEX = $@"^base\((.*)\)$";
@@ -39,7 +39,7 @@ namespace RedRust
 			{ CLASSDEFREGEX,((lines,_,_,_,_)=>!lines.Current!.Line.Equals("else:"),Class.Declaration) },
 			{ ENUMDEFREGEX,((lines,_,_,_,_)=>true, Enum.Declaration) },
 			{ FUNCDEFREGEX,((_,_,_,_,_)=>true,Func.Declaration) },
-			{ CONSTRUCTORDEFREGEX,((_,captures,_,_,_)=> Tokens.TryGetValue(captures[1],out Token? t) && t is not null && t is Class,Class.ConstructorDeclaration) },
+			{ CONSTRUCTORDEFREGEX,((_,captures,_,_,_)=> Tokens.TryGetValue(captures[2],out Token? t) && t is not null && t is IClass,Class.ConstructorDeclaration) },
 			{ DECLARATIONREGEX,((lines,_,_,_,_)=>!lines.Current!.Line.StartsWith("return "),Declaration.Declaration_)},
 			{ ASIGNREGEX,((_,_,_,_,_)=>true,Asign.Declaration)},
 			{ CALLFUNCREGEX,((_,captures,_,_,_)=>!captures[1].Value.Equals("base"),CallFunction.Declaration) },
@@ -81,7 +81,7 @@ namespace RedRust
 					name.Substring(start + 1, name.Length - start - 2)
 						.Split(", ")
 						.Select(ccc => IClass.IsClass(GetClass(ccc, generic)))
-						.ToArray());
+						.ToArray(), out _);
 			}
 			return cc;
 		}

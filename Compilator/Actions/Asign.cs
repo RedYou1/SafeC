@@ -25,7 +25,7 @@ namespace RedRust
 			if (!ob.Own)
 				throw new Exception();
 
-			Action a = new FileReader(captures[5].Value).Parse(fromC, fromF, gen, from).Cast<Action>().First();
+			Action a = new FileReader(captures[9].Value).Parse(fromC, fromF, gen, from).Cast<Action>().First();
 			IEnumerable<Action>? c = ob.ReturnType.Convert(a, fromF, gen);
 
 			if (c is null)

@@ -30,18 +30,24 @@
 		{
 			foreach (var kvp in Classes)
 			{
-				for (int i = 0; i < gen.Length; i++)
+				int i = 0;
+				for (; i < gen.Length; i++)
 					if (!kvp.Key[i].Equals(gen[i]))
-						return null;
-				return kvp.Value;
+						break;
+				if (i == gen.Length)
+					return kvp.Value;
 			}
 			return null;
 		}
 
-		public Class GenerateClass(Class[] gen)
+		public Class GenerateClass(Class[] gen, out Dictionary<string, Class> ogen)
 		{
 			if (gen.Length != GenNames.Length)
 				throw new Exception();
+
+			ogen = new();
+			for (int i = 0; i < GenNames.Length; i++)
+				ogen.Add(GenNames[i], gen[i]);
 
 			Class? t = getClass(gen);
 			if (t is not null)
@@ -50,25 +56,21 @@
 			Class c = new Class($"{Name}${string.Join('$', gen.Select(g => g.Name))}", null, Array.Empty<Class>());
 			Classes.Add(gen, c);
 
-			Dictionary<string, Class> g = new();
-			for (int i = 0; i < GenNames.Length; i++)
-				g.Add(GenNames[i], gen[i]);
-
-			foreach (Declaration d in Variables(c, g))
+			foreach (Declaration d in Variables(c, ogen))
 				c.Variables.Add(d);
 
 			foreach (Func<Class, Dictionary<string, Class>, IFunc> f in Constructors)
-				c.Constructors.Add(f(c, g));
+				c.Constructors.Add(f(c, ogen));
 
 			foreach (Func<Class, Dictionary<string, Class>, (Class, Func<Action, Action>)> f in Casts)
 			{
-				var ff = f(c, g);
+				var ff = f(c, ogen);
 				c.Casts.Add(ff.Item1, ff.Item2);
 			}
 
 			foreach (Func<Class, Dictionary<string, Class>, IFunc> f in Funcs)
 			{
-				var ff = f(c, g);
+				var ff = f(c, ogen);
 				c.Funcs.Add(ff.Name, ff);
 			}
 

@@ -18,6 +18,8 @@ typedef enum Classes {
 	Classes$C,
 	Classes$Lock,
 	Classes$Typed$A,
+	Classes$Container$int,
+	Classes$Container$Colors,
 }Classes;
 typedef struct Typed$A {
 	A* ptr;
@@ -136,6 +138,38 @@ Lock Lock_Lock_0(int l, Typed$A a) {
 unsigned long Len(char* this) {
 	return strlen(this);
 }
+typedef struct Container$int {
+	int a;
+}Container$int;
+void Container$int_test$Colors(Container$int this, Colors b) {
+	printf("Container{");
+	printf("%i", this.a);
+	printf(", ");
+	printf("%i", b);
+	printf("}");
+}
+Container$int Container$int_Container_0$Colors(int a, Colors* b) {
+	Container$int this;
+	this.a = a;
+	Container$int_test$Colors(this, *b);
+	return this;
+}
+typedef struct Container$Colors {
+	Colors a;
+}Container$Colors;
+void Container$Colors_test$int(Container$Colors this, int b) {
+	printf("Container{");
+	printf("%i", this.a);
+	printf(", ");
+	printf("%i", b);
+	printf("}");
+}
+Container$Colors Container$Colors_Container_0$int(Colors a, int* b) {
+	Container$Colors this;
+	this.a = a;
+	Container$Colors_test$int(this, *b);
+	return this;
+}
 int main() {
 	A aa = A_A_0();
 	printf("%i", aa.a);
@@ -177,5 +211,10 @@ int main() {
 	unsigned long sl = Len(a.id);
 	printf("%lu", sl);
 	printf("\n");
+	Colors _4 = Colors$blue;
+	Container$int_Container_0$Colors(32, &_4);
+	printf("\n");
+	int _5 = 16;
+	Container$Colors_Container_0$int(Colors$red, &_5);
 	return 0;
 }

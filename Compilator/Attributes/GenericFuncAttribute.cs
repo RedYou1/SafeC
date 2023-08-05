@@ -22,14 +22,6 @@ namespace RedRust
 			Params = @params;
 		}
 
-		public (Type @return, Parameter[] @params) ApplyFunc(Class? c, Dictionary<string, Class> gen)
-		{
-			var @return = Program.GetType(Return, c, gen);
-			var @params = Params.Chunk(2).Select((t, i) => new Parameter(Program.GetType(t[0], c, gen), t[1])).ToArray();
-
-			return (@return, @params);
-		}
-
 		public void Implement(MethodInfo method, ClassAttribute? c, GenericClassAttribute? c2)
 		{
 			if (c is not null)
@@ -54,34 +46,17 @@ namespace RedRust
 		GenericFunc implement(
 			MethodInfo method, Class? c, Dictionary<string, Class>? gen)
 		{
-			return new(Name, Params.Chunk(2).Select<string[], Func<Dictionary<string, Class>, Type>>(t =>
-			{
-				var t2 = Program.GetTypeMaybe(t[0], c, gen);
-				if (t2 is null)
-					return new(gen2 => Program.GetType(t[0], c, gen2));
-				return _ => t2;
-			}).ToArray(),
-				(gen2) =>
-			{
-				Dictionary<string, Class> gen3 = new(gen2);
-				if (gen is not null)
-					foreach (var g in gen)
-						gen3.Add(g.Key, g.Value);
-
-				var t = ApplyFunc(c, gen3);
-
-				var func = new Func(t.@return, t.@params)
-				{ Name = $"{c.Name}${string.Join('$', gen2.Select(g => g.Value.Name))}" };
-
-				foreach (Token ta in method.GetFuncDef(gen3).Parse(c, func, null, Array.Empty<Token>()))
+			return new(c, Name, Params.Chunk(2).Count() + (c is null ? 0 : 1), gen,
+				Generics,
+				method.GetFuncDef,
+				gen2 => Program.GetType(Return, c, gen2),
+				gen2 =>
 				{
-					if (ta is not Action a)
-						throw new Exception();
-					func.Actions.Add(a);
-				}
-
-				return func;
-			});
+					var v = Params.Chunk(2).Select((t, i) => new Parameter(Program.GetType(t[0], c, gen2), t[1]));
+					if (c is not null)
+						v = v.Prepend(new Parameter(Program.GetType(Return, c, gen2), "this"));
+					return v.ToArray();
+				});
 		}
 	}
 }

@@ -1,4 +1,5 @@
 ﻿using PCRE;
+using System.Xml.Linq;
 
 namespace RedRust
 {
@@ -25,7 +26,7 @@ namespace RedRust
 			}
 		}
 
-		public static Func Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
+		public static IFunc Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromF is not null || from.Any())
 				throw new Exception();
@@ -33,22 +34,60 @@ namespace RedRust
 			string returnTypeString = captures[1];
 			Type returnType = Program.GetType(returnTypeString, fromC, gen);
 
-			string _params = captures[13];
+			string[] _params = captures[13].Value.Split(", ");
 
 			string fRawName = captures[11];
-			var f = new Func(
-				returnType,
-				string.IsNullOrWhiteSpace(_params) ? Array.Empty<Parameter>()
-					: _params.Split(", ").Select(p =>
-					{
-						string[] p2 = p.Split(" ");
-						if (p2.Last().Contains("this"))
-							p2 = p2.Append("this").ToArray();
-						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
-					}).ToArray())
+
+			string name;
+			string[] gens = Array.Empty<string>();
+			int tname = fRawName.IndexOf('<');
+			if (tname < 0)
+				name = fRawName;
+			else
 			{
-				Name = $"{(fromC is null ? "" : $"{fromC.Name}_")}{fRawName}"
-			};
+				name = fRawName.Substring(0, tname);
+				gens = fRawName.Substring(tname + 1, fRawName.Length - tname - 2).Split(", ");
+			}
+
+			name = $"{(fromC is null ? "" : $"{fromC.Name}_")}{name}";
+
+			var fr = lines.Extract();
+
+			IFunc f;
+			if (gens.Length == 0)
+			{
+				f = new Func(
+					returnType,
+					string.IsNullOrWhiteSpace(_params[0]) ? Array.Empty<Parameter>()
+						: _params.Select(p =>
+						{
+							string[] p2 = p.Split(" ");
+							if (p2.Last().Contains("this"))
+								p2 = p2.Append("this").ToArray();
+							return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
+						}).ToArray())
+				{
+					Name = name
+				};
+			}
+			else
+			{
+				f = new GenericFunc(fromC, name, string.IsNullOrWhiteSpace(_params[0]) ? 0 : _params.Length,
+					gen, gens,
+					_ =>
+					{
+						fr.Line = 0;
+						return fr;
+					},
+					_ => returnType,
+					gen2 => _params.Select(p =>
+						{
+							string[] p2 = p.Split(" ");
+							if (p2.Last().Contains("this"))
+								p2 = p2.Append("this").ToArray();
+							return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
+						}).ToArray());
+			}
 
 			if (fromC is Class c)
 				c.Funcs.Add(fRawName, f);
@@ -56,12 +95,14 @@ namespace RedRust
 				Program.Tokens.Add(fRawName, f);
 
 
-
-			foreach (var t in lines.Extract().Parse(fromC, f, gen, Array.Empty<Token>()))
+			if (f is Func rf)
 			{
-				if (t is not Action a)
-					throw new Exception();
-				f.Actions.Add(a);
+				foreach (var t in fr.Parse(fromC, rf, gen, Array.Empty<Token>()))
+				{
+					if (t is not Action a)
+						throw new Exception();
+					rf.Actions.Add(a);
+				}
 			}
 
 			return f;

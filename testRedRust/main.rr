@@ -54,6 +54,20 @@ C(A):
 	void Add(*dyn this):
 		this.a = this.a + 2
 
+Container<T>:
+	T a
+
+	Container<V>(T a, *V b):
+		this.a = a
+		this.test<V>(b)
+
+	void test<V>(this, V b):
+		print("Container{")
+		print(this.a)
+		print(", ")
+		print(b)
+		print("}")
+
 B createB(Colors color):
 	B b = new B(color)
 	return b
@@ -130,4 +144,9 @@ i32 main():
 	u64 sl = a.id.Len()
 	print(sl)
 	print("\n")
+
+
+	new<Colors> Container<i32>(32, Colors.blue)
+	print("\n")
+	new<i32> Container<Colors>(Colors.red, 16)
 	return 0

@@ -94,8 +94,8 @@ namespace RedRust
 		public static Object MathDeclaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			Object o1 = new FileReader(captures[1].Value).Parse(fromC, fromF, gen, from).Cast<Object>().First();
-			string op = captures[7];
-			Object o2 = new FileReader(captures[8].Value).Parse(fromC, fromF, gen, from).Cast<Object>().First();
+			string op = captures[11];
+			Object o2 = new FileReader(captures[12].Value).Parse(fromC, fromF, gen, from).Cast<Object>().First();
 
 			Class f32 = IClass.IsClass(Program.GetClass("f32", gen));
 			Class i32 = IClass.IsClass(Program.GetClass("i32", gen));
