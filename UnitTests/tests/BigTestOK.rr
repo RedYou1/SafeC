@@ -54,20 +54,6 @@ C(A):
 	void Add(*dyn this):
 		this.a = this.a + 2
 
-Container<T>:
-	T a
-
-	Container<V>(T a, *V b):
-		this.a = a
-		this.test<V>(b)
-
-	void test<V>(this, V b):
-		print("Container{")
-		print(this.a)
-		print(", ")
-		print(b)
-		print("}")
-
 B createB(Colors color):
 	B b = new B(color)
 	return b
@@ -89,15 +75,6 @@ void Add(*typedyn A a):
 void TakeOwner(A a):
 	print(a.a)
 	print("\n")
-
-Lock:
-	i32 l
-	&typedyn A a
-
-	Lock(i32 l, &typedyn A a):
-		this.l = l
-		this.a = a
-		Add(this.a)
 
 i32 main():
 	A aa = new A()
@@ -132,21 +109,5 @@ i32 main():
 	b = createB(Colors.red)
 	b.Print()
 
-
-	bool start = a.id.StartsWith("ID2")
-
-	print(start)
-	print("\n")
-
 	a.Add2(5)
-
-	u64 sl = a.id.Len()
-	print(sl)
-	print("\n")
-
-	Lock lock = new Lock(5, a)
-
-	new<Colors> Container<i32>(32, Colors.blue)
-	print("\n")
-	new<i32> Container<Colors>(Colors.red, 16)
 	return 0

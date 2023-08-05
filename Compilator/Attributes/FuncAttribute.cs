@@ -24,8 +24,8 @@ namespace RedRust
 
 		public (Type @return, Parameter[] @params) ApplyFunc(IClass? c, Dictionary<string, Class>? gen)
 		{
-			var @return = Program.GetType(Return, c, gen);
-			var @params = Params.Chunk(2).Select((t, i) => new Parameter(Program.GetType(t[0], c, gen), t[1])).ToArray();
+			var @return = Compiler.Instance!.GetType(Return, c, gen);
+			var @params = Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen), t[1])).ToArray();
 
 			return (@return, @params);
 		}
@@ -35,18 +35,18 @@ namespace RedRust
 		{
 			if (c is not null)
 			{
-				Class cl = IClass.IsClass(Program.GetClass(c.Name, null));
+				Class cl = IClass.IsClass(Compiler.Instance!.GetClass(c.Name, null));
 				implement(method, cl.Funcs.Add, cl, null);
 			}
 			else if (c2 is not null)
 			{
-				if (Program.GetClass(c2.Name, null) is not GenericClass gc)
+				if (Compiler.Instance!.GetClass(c2.Name, null) is not GenericClass gc)
 					throw new Exception();
 				gc.Funcs.Add((c, gen) => implement(method, c.Funcs.Add, c, gen));
 			}
 			else
 			{
-				implement(method, Program.Tokens.Add, null, null);
+				implement(method, Compiler.Instance!.Tokens.Add, null, null);
 			}
 		}
 

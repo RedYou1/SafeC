@@ -8,6 +8,7 @@
 		public readonly bool Null;
 		public readonly bool CanBeChild;
 		public readonly bool CanCallFunc;
+		public bool Possessed;
 
 
 		public bool IsPtr => !DynTyped && IsNotStack;
@@ -20,7 +21,8 @@
 			bool _ref,
 			bool _null,
 			bool canBeChild,
-			bool canCallFunc)
+			bool canCallFunc,
+			bool possessed)
 		{
 			Of = of;
 			Own = own;
@@ -28,6 +30,7 @@
 			Null = _null;
 			CanBeChild = canBeChild;
 			CanCallFunc = canCallFunc;
+			Possessed = possessed;
 		}
 
 		private bool Convert(IClass other)
@@ -49,9 +52,12 @@
 			Object? ob = other as Object;
 
 			if (ob is not null && !ob.Own)
-				throw new Exception();
+				throw new NoAccessException(ob.Name);
 
-			if (other.ReturnType.Of == Program.VOID)
+			if (Own && other.ReturnType.Possessed && !Of.Name.Equals("char*"))
+				throw new CompileException("Cant take ownership of possessed object");
+
+			if (other.ReturnType.Of == Compiler.Instance!.VOID)
 			{
 				if (!Null)
 					return null;
@@ -69,7 +75,7 @@
 
 			if (!DynTyped && other.ReturnType.DynTyped)
 				if (Convert(other.ReturnType.Of))
-					return new Action[] { new Object(new(other.ReturnType.Of, false, true, false, false, true), $"{other.Name}.ptr") };
+					return new Action[] { new Object(new(other.ReturnType.Of, false, true, false, false, true, true), $"{other.Name}.ptr") };
 				else
 					return null;
 
@@ -82,7 +88,7 @@
 
 			if (DynTyped && !other.ReturnType.Ref)
 			{
-				Class ig = IClass.IsClass(Program.GetClass($"Typed<{Of.Name}>", gen));
+				Class ig = IClass.IsClass(Compiler.Instance!.GetClass($"Typed<{Of.Name}>", gen));
 
 				Dictionary<string, Class> gen2 = new()
 				{
@@ -155,7 +161,7 @@
 		{
 			if (DynTyped)
 			{
-				yield return Program.GetClass($"Typed<{Of.Name}>", null);
+				yield return Compiler.Instance!.GetClass($"Typed<{Of.Name}>", null);
 				foreach (Class c in IClass.AllChilds(Of))
 					yield return c;
 			}

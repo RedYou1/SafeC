@@ -16,10 +16,7 @@ typedef enum Classes {
 	Classes$A,
 	Classes$B,
 	Classes$C,
-	Classes$Lock,
 	Classes$Typed$A,
-	Classes$Container$int,
-	Classes$Container$Colors,
 }Classes;
 typedef struct Typed$A {
 	A* ptr;
@@ -122,54 +119,6 @@ B createB(Colors color) {
 	B b = B_B_0(color);
 	return b;
 }
-char StartsWith(char* this, char* s) {
-}
-unsigned long Len(char* this) {
-	return strlen(this);
-}
-typedef struct Lock {
-	int l;
-	Typed$A a;
-}Lock;
-Lock Lock_Lock_0(int l, Typed$A a) {
-	Lock this;
-	this.l = l;
-	this.a = a;
-	Add(this.a);
-	return this;
-}
-typedef struct Container$int {
-	int a;
-}Container$int;
-void Container$int_test$Colors(Container$int this, Colors b) {
-	printf("Container{");
-	printf("%i", this.a);
-	printf(", ");
-	printf("%i", b);
-	printf("}");
-}
-Container$int Container$int_Container_0$Colors(int a, Colors* b) {
-	Container$int this;
-	this.a = a;
-	Container$int_test$Colors(this, *b);
-	return this;
-}
-typedef struct Container$Colors {
-	Colors a;
-}Container$Colors;
-void Container$Colors_test$int(Container$Colors this, int b) {
-	printf("Container{");
-	printf("%i", this.a);
-	printf(", ");
-	printf("%i", b);
-	printf("}");
-}
-Container$Colors Container$Colors_Container_0$int(Colors a, int* b) {
-	Container$Colors this;
-	this.a = a;
-	Container$Colors_test$int(this, *b);
-	return this;
-}
 int main() {
 	A aa = A_A_0();
 	printf("%i", aa.a);
@@ -203,18 +152,6 @@ int main() {
 	B _3 = createB(Colors$red);
 	b = &_3;
 	B_Print(b);
-	char start = StartsWith(a.id, "ID2");
-	printf(start ? "True" : "False");
-	printf("\n");
 	A_Add2(&a, 5);
-	unsigned long sl = Len(a.id);
-	printf("%lu", sl);
-	printf("\n");
-	Lock lock = Lock_Lock_0(5, Typed$A$C(&a));
-	Colors _4 = Colors$blue;
-	Container$int_Container_0$Colors(32, &_4);
-	printf("\n");
-	int _5 = 16;
-	Container$Colors_Container_0$int(Colors$red, &_5);
 	return 0;
 }

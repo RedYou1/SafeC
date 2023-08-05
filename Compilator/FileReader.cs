@@ -42,7 +42,7 @@ namespace RedRust
 				}
 				else
 				{
-					var regex = Program.Regexs.Select(kvp => (new PcreRegex(kvp.Key).Match(Current.Line), kvp.Value))
+					var regex = Compiler.Instance!.Regexs.Select(kvp => (new PcreRegex(kvp.Key).Match(Current.Line), kvp.Value))
 						.Where(kvp => kvp.Item1.Success && kvp.Value.Item1(this, kvp.Item1, fromC, fromF, from)).ToArray();
 					if (regex.Length == 0 || regex.Length >= 2)
 						throw new Exception();

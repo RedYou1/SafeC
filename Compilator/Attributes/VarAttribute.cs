@@ -14,7 +14,7 @@
 
 		public Type ApplyFunc(Class of)
 		{
-			return Program.GetType(Type, of, null);
+			return Compiler.Instance!.GetType(Type, of, null);
 		}
 	}
 }

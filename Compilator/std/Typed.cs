@@ -9,7 +9,7 @@
 		public static IEnumerable<StdLine> Variables(Dictionary<string, Class> gen)
 		{
 			yield return $"&dyn {gen["T"].Name} ptr";
-			yield return $"{Program.Classes.Name} type";
+			yield return $"{Compiler.Instance!.Classes.Name} type";
 		}
 
 		[GenericConstructor(new string[] { "V" }, new string[] {
@@ -22,11 +22,11 @@
 				func.Objects.Add("this",
 					new Object(
 						new Type(
-							IClass.IsClass(Program.GetClass($"Typed<{gen["T"].Name}>", gen)), true, false, false, false, true),
+							IClass.IsClass(Compiler.Instance!.GetClass($"Typed<{gen["T"].Name}>", gen)), true, false, false, false, true, false),
 					"this"));
 			});
 			yield return "this.ptr = ptr";
-			yield return $"this.type = {Program.Classes.Name}.{gen["V"].Name}";
+			yield return $"this.type = {Compiler.Instance!.Classes.Name}.{gen["V"].Name}";
 			yield return "return this";
 		}
 	}
@@ -40,7 +40,7 @@
 		public static IEnumerable<StdLine> Variables(Dictionary<string, Class> gen)
 		{
 			yield return $"*dyn {gen["T"].Name} ptr";
-			yield return $"{Program.Classes.Name} type";
+			yield return $"{Compiler.Instance!.Classes.Name} type";
 		}
 
 		[GenericConstructor(new string[] { "V" }, new string[] {
@@ -53,11 +53,11 @@
 				func.Objects.Add("this",
 					new Object(
 						new Type(
-							IClass.IsClass(Program.GetClass($"Typed<{gen["T"].Name}>", gen)), true, false, false, false, true),
+							IClass.IsClass(Compiler.Instance!.GetClass($"Typed<{gen["T"].Name}>", gen)), true, false, false, false, true, false),
 					"this"));
 			});
 			yield return "this.ptr = ptr";
-			yield return $"this.type = {Program.Classes.Name}.{gen["V"].Name}";
+			yield return $"this.type = {Compiler.Instance!.Classes.Name}.{gen["V"].Name}";
 			yield return "return this";
 		}
 	}

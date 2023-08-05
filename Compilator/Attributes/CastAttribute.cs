@@ -14,7 +14,7 @@ namespace RedRust
 
 		public Type ApplyFunc(Dictionary<string, Class>? gen)
 		{
-			var @return = Program.GetType(Return, null, gen);
+			var @return = Compiler.Instance!.GetType(Return, null, gen);
 			return @return;
 		}
 
@@ -31,11 +31,11 @@ namespace RedRust
 			{
 				var t = getAction(method, null);
 
-				IClass.IsClass(Program.GetClass(c.Name, null)).Casts.Add(t.@return.Of, t.action);
+				IClass.IsClass(Compiler.Instance!.GetClass(c.Name, null)).Casts.Add(t.@return.Of, t.action);
 			}
 			else if (c2 is not null)
 			{
-				if (Program.GetClass(c2.Name, null) is not GenericClass gc)
+				if (Compiler.Instance!.GetClass(c2.Name, null) is not GenericClass gc)
 					throw new Exception();
 				gc.Casts.Add((c, gen) =>
 				{

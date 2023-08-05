@@ -19,12 +19,12 @@ namespace RedRust
 		{
 			if (c is not null)
 			{
-				Class cl = IClass.IsClass(Program.GetClass(c.Name, null));
+				Class cl = IClass.IsClass(Compiler.Instance!.GetClass(c.Name, null));
 				cl.Constructors.Add(implement(method, cl, null));
 			}
 			else if (c2 is not null)
 			{
-				if (Program.GetClass(c2.Name, null) is not GenericClass gc)
+				if (Compiler.Instance!.GetClass(c2.Name, null) is not GenericClass gc)
 					throw new Exception();
 				gc.Constructors.Add((c, gen) => implement(method, c, gen));
 			}
@@ -38,8 +38,8 @@ namespace RedRust
 			return new(c, c.Name, Params.Chunk(2).Count(), gen,
 				Generics,
 				method.GetFuncDef,
-				_ => new(c, true, false, false, false, true),
-				gen2 => Params.Chunk(2).Select((t, i) => new Parameter(Program.GetType(t[0], c, gen2), t[1])).ToArray());
+				_ => new(c, true, false, false, false, true, false),
+				gen2 => Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen2), t[1])).ToArray());
 		}
 	}
 }

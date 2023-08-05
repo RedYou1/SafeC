@@ -17,7 +17,7 @@ namespace RedRust
 		public static If Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromF is null)
-				throw new Exception();
+				throw NotInRigthPlacesException.Func("If");
 
 			If f = new If();
 
@@ -70,18 +70,24 @@ namespace RedRust
 					string[] c = ss[1].Split(" ");
 
 					_class = obj.Of;
-					obj.Of = IClass.IsClass(Program.GetClass(c[0], gen));
+					obj.Of = IClass.IsClass(Compiler.Instance!.GetClass(c[0], gen));
 
 					f.condition = $"{obj.Name}.type {(not_class ? "!" : "=")}= Classes${obj.Of.Name}";
 
 					if (!not_class)
 					{
-						Type t = new Type(obj.Of, false, true, false, false, false);
+						Type t;
 						Action l;
 						if (obj.ReturnType.DynTyped)
+						{
 							l = new Object(obj.ReturnType, $"{obj.Name}.ptr", obj.Own);
+							t = new Type(obj.Of, false, true, false, false, false, true);
+						}
 						else
+						{
 							l = obj;
+							t = new Type(obj.Of, false, true, false, false, false, false);
+						}
 
 						string name = c[1];
 						f.Actions.Add(new Declaration(t, l) { Name = name });

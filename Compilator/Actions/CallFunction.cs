@@ -46,7 +46,7 @@ namespace RedRust
 		public static CallFunction Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromF is null)
-				throw new Exception();
+				throw NotInRigthPlacesException.Func("CallFunction");
 
 			string name = captures[1].Value.Split('.').Last();
 			string[] of = captures[1].Value.Split('.').SkipLast(1).ToArray();
@@ -54,15 +54,25 @@ namespace RedRust
 			Object? ob = null;
 			IFunc? f;
 			if (of.Length == 0)
-				f = Program.Tokens[name] as IFunc;
+			{
+				f = Compiler.Instance!.Tokens[name] as IFunc;
+
+				if (f is null)
+					throw new CompileException($"function {name} not found");
+			}
 			else
 			{
 				ob = new FileReader(string.Join('.', of)).Parse(fromC, fromF, gen, from).Cast<Object>().First();
+
+				if (!ob.Own)
+					throw new NoAccessException(ob.Name);
+
 				f = ob.ReturnType.Of.AllFuncs[name];
+
+				if (f is null)
+					throw new CompileException($"function {name} not found of class {ob.Of.Name}");
 			}
 
-			if (f is null)
-				throw new Exception();
 
 			Action[] args = new FileReader(getArgs(captures[9]).ToStdLine().ToArray()).Parse(fromC, fromF, gen, from)
 				.Cast<Action>().ToArray();
@@ -73,7 +83,7 @@ namespace RedRust
 			var c = f.CanCall(fromF, gen, args);
 
 			if (c is null)
-				throw new Exception();
+				throw new CompileException($"cant call function {f.Name}");
 
 			return new CallFunction(c.Func, c.Args);
 		}
@@ -81,7 +91,7 @@ namespace RedRust
 		public static CallFunction BaseDeclaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromC is null || fromC.Extends is null || fromF is null)
-				throw new Exception();
+				throw NotInRigthPlacesException.ClassOrFunc("CallFunction base");
 
 			Action[] args = new FileReader(getArgs(captures[1]).ToStdLine().ToArray())
 				.Parse(fromC, fromF, gen, from).Cast<Action>().Prepend(fromF.Objects["this"]).ToArray();
@@ -89,7 +99,7 @@ namespace RedRust
 			var func = fromC.Extends.Constructors.Select(c => c.CanCall(fromF, gen, args)).Where(c => c is not null).ToArray();
 
 			if (func.Length != 1)
-				throw new Exception();
+				throw new CompileException($"function found {func.Length} in CallFunc base");
 
 			return new CallFunction(func[0]!.Func, func[0]!.Args);
 		}
@@ -97,9 +107,9 @@ namespace RedRust
 		public static CallFunction NewDeclaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromF is null)
-				throw new Exception();
+				throw NotInRigthPlacesException.Func("CallFunction new");
 
-			Class @class = IClass.IsClass(Program.GetClass(captures[4], gen));
+			Class @class = IClass.IsClass(Compiler.Instance!.GetClass(captures[4], gen));
 
 			//string gensClass = captures[7];
 
@@ -120,7 +130,7 @@ namespace RedRust
 					if (gen3 is null)
 						gen3 = new();
 					for (int i = 0; i < gf.GenNames.Length; i++)
-						gen3.Add(gf.GenNames[i], IClass.IsClass(Program.GetClass(gensConstructor[i], gen)));
+						gen3.Add(gf.GenNames[i], IClass.IsClass(Compiler.Instance!.GetClass(gensConstructor[i], gen)));
 				}
 				else if (c is not RedRust.Func)
 					throw new Exception();
@@ -131,7 +141,7 @@ namespace RedRust
 			}).Where(c => c is not null).ToArray();
 
 			if (func.Length != 1)
-				throw new Exception();
+				throw new CompileException($"function found {func.Length} in CallFunc new");
 
 			return new CallFunction(func[0]!.Func, func[0]!.Args);
 		}

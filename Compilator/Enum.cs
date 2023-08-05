@@ -16,9 +16,9 @@ namespace RedRust
 
 		public void Init()
 		{
-			Type t = new(IClass.IsClass(Program.GetClass("i32", null)), true, false, false, false, true);
+			Type t = new(IClass.IsClass(Compiler.Instance!.GetClass("i32", null)), true, false, false, false, true, false);
 			Casts.Add(t.Of, (Action a) => new CastAction(t, a, ob => new FileReader(ob)));
-			t = new(IClass.IsClass(Program.GetClass("str", null)), true, false, false, false, true);
+			t = new(IClass.IsClass(Compiler.Instance!.GetClass("str", null)), true, false, false, false, true, false);
 			Casts.Add(t.Of, (Action a) => new CastAction(t, a, ob => new FileReader($"\"%i\", {ob}")));//TODO recursive?
 		}
 
@@ -28,7 +28,7 @@ namespace RedRust
 				throw new Exception();
 
 			var c = new Enum(captures[2]);
-			Program.Tokens.Add(c.Name, c);
+			Compiler.Instance!.Tokens.Add(c.Name, c);
 
 			foreach (string t in lines.Extract())
 			{

@@ -1,5 +1,4 @@
 ﻿using PCRE;
-using System.Xml.Linq;
 
 namespace RedRust
 {
@@ -32,7 +31,7 @@ namespace RedRust
 				throw new Exception();
 
 			string returnTypeString = captures[1];
-			Type returnType = Program.GetType(returnTypeString, fromC, gen);
+			Type returnType = Compiler.Instance!.GetType(returnTypeString, fromC, gen, false);
 
 			string[] _params = captures[13].Value.Split(", ");
 
@@ -64,7 +63,7 @@ namespace RedRust
 							string[] p2 = p.Split(" ");
 							if (p2.Last().Contains("this"))
 								p2 = p2.Append("this").ToArray();
-							return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
+							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
 						}).ToArray())
 				{
 					Name = name
@@ -85,14 +84,14 @@ namespace RedRust
 							string[] p2 = p.Split(" ");
 							if (p2.Last().Contains("this"))
 								p2 = p2.Append("this").ToArray();
-							return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
+							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
 						}).ToArray());
 			}
 
 			if (fromC is Class c)
 				c.Funcs.Add(fRawName, f);
 			else
-				Program.Tokens.Add(fRawName, f);
+				Compiler.Instance!.Tokens.Add(fRawName, f);
 
 
 			if (f is Func rf)

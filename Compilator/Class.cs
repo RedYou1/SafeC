@@ -54,7 +54,7 @@ namespace RedRust
 			Included = included;
 
 			if (!included && !Name.Equals("void") && !Name.Equals("Classes"))
-				Program.Classes.Options.Add(Name);
+				Compiler.Instance!.Classes.Options.Add(Name);
 			extends?.Childs.Add(this);
 		}
 
@@ -73,15 +73,15 @@ namespace RedRust
 			{
 				c = new Class(
 					captures[2],
-					string.IsNullOrWhiteSpace(m[0]) ? null : IClass.IsClass(Program.GetClass(m[0], gen)),
-					m.Skip(1).Select(Program.GetInterface).ToArray());
+					string.IsNullOrWhiteSpace(m[0]) ? null : IClass.IsClass(Compiler.Instance!.GetClass(m[0], gen)),
+					m.Skip(1).Select(Compiler.Instance!.GetInterface).ToArray());
 			}
 			else
 			{
 				c = new GenericClass(name, gens.Split(", "), null, Array.Empty<Class>());
 			}
 
-			Program.Tokens.Add(c.Name, c);
+			Compiler.Instance!.Tokens.Add(c.Name, c);
 
 			var fr = lines.Extract();
 
@@ -152,16 +152,16 @@ namespace RedRust
 
 			//Base
 			string fname = $"{fromC.Name}_Base_{name}_{id}";
-			Type type = new Type(fromC, false, true, false, true, false);
+			Type type = new Type(fromC, false, true, false, true, false, false);
 			IFunc f;
 			if (string.IsNullOrEmpty(gens))
 			{
-				f = new Func(new Type(Program.VOID, false, false, false, false, false),
+				f = new Func(new Type(Compiler.Instance!.VOID, false, false, false, false, false, false),
 					(string.IsNullOrWhiteSpace(_params[0]) ? Array.Empty<Parameter>()
 						: _params.Select(p =>
 						{
 							string[] p2 = p.Split(" ");
-							return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
+							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
 						})).Prepend(new Parameter(type, "this")).ToArray())
 				{
 					Name = fname
@@ -187,7 +187,7 @@ namespace RedRust
 					gen2 => _params.Select(p =>
 					{
 						string[] p2 = p.Split(" ");
-						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
+						return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
 					}).Prepend(new Parameter(type, "this")).ToArray());
 
 			fromC.Constructors.Add(f);
@@ -195,7 +195,7 @@ namespace RedRust
 
 			//New
 			fname = $"{fromC.Name}_{name}_{id}";
-			type = new Type(fromC, true, false, false, false, true);
+			type = new Type(fromC, true, false, false, false, true, false);
 			if (string.IsNullOrEmpty(gens))
 			{
 				f = new Func(
@@ -204,7 +204,7 @@ namespace RedRust
 						: _params.Select(p =>
 						{
 							string[] p2 = p.Split(" ");
-							return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
+							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
 						}).ToArray())
 				{
 					Name = fname
@@ -234,7 +234,7 @@ namespace RedRust
 					gen2 => _params.Select(p =>
 					{
 						string[] p2 = p.Split(" ");
-						return new Parameter(Program.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
+						return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
 					}).ToArray());
 			}
 

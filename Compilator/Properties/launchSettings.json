@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Compilator": {
+      "commandName": "Project",
+      "commandLineArgs": "..\\..\\..\\testRedRust\\main.rr ..\\..\\..\\testC\\testC.c"
+    }
+  }
+}

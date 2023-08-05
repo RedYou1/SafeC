@@ -14,7 +14,7 @@ namespace RedRust
 		{
 			get
 			{
-				if (Action is not null && Action.ReturnType.Of != Program.VOID)
+				if (Action is not null && Action.ReturnType.Of != Compiler.Instance!.VOID)
 					return Action.ReturnType;
 				return Of;
 			}
@@ -29,18 +29,17 @@ namespace RedRust
 		public static Declaration Declaration_(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromC is null && fromF is null)
-				throw new Exception();
+				throw NotInRigthPlacesException.Method("Declaration");
 
-			var r = Program.GetType(captures[1], fromC, gen);
+			var r = Compiler.Instance!.GetType(captures[1], fromC, gen);
 
 			Action? current = null;
 			if (!string.IsNullOrEmpty(captures[13]))
 			{
 				current = new FileReader(captures[13].Value).Parse(fromC, fromF, gen, from).First() as Action;
 				if (current is null)
-				{
 					throw new Exception();
-				}
+				r.Possessed = current.ReturnType.Possessed;
 			}
 
 			var d = new Declaration(r, current) { Name = captures[11] };

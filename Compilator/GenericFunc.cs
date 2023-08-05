@@ -1,6 +1,4 @@
-﻿using System.Security.Claims;
-
-namespace RedRust
+﻿namespace RedRust
 {
 	public class GenericFunc : IFunc
 	{

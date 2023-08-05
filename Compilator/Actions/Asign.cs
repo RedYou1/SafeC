@@ -18,12 +18,12 @@ namespace RedRust
 		public static Asign Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromF is null)
-				throw new Exception();
+				throw NotInRigthPlacesException.Func("Asign");
 
 			Object ob = new FileReader(captures[1].Value).Parse(fromC, fromF, gen, from).Cast<Object>().First();
 
 			if (!ob.Own)
-				throw new Exception();
+				throw new NoAccessException(ob.Name);
 
 			Action a = new FileReader(captures[9].Value).Parse(fromC, fromF, gen, from).Cast<Action>().First();
 			IEnumerable<Action>? c = ob.ReturnType.Convert(a, fromF, gen);
