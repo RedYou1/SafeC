@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[GenericClass("OwnTyped", null, new string[0],
 		new string[] {

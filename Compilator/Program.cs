@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	public class Program
 	{
@@ -29,7 +29,7 @@
 		{
 			if (args.Length != 2)
 				throw new Exception();
-			if (!args[0].EndsWith(".rr"))
+			if (!args[0].EndsWith(".sc"))
 				throw new Exception();
 			if (!File.Exists(args[0]))
 				throw new Exception();

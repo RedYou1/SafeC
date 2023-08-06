@@ -1,7 +1,7 @@
 ﻿using PCRE;
 using System.Reflection;
 
-namespace RedRust
+namespace SafeC
 {
 	public class Compiler
 	{

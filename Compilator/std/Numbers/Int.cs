@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[Class("i32", "int", null, new string[] { "INumber" })]
 	public class Int

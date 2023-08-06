@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[Class("f32", "float", null, new string[] { "INumber" })]
 	internal class Float

@@ -1,5 +1,5 @@
 using Microsoft.VisualStudio.TestTools.UnitTesting;
-using RedRust;
+using SafeC;
 using System.Linq;
 using System.Runtime.CompilerServices;
 
@@ -13,7 +13,7 @@ namespace UnitTests
 			string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
 			if (baseDirectory.EndsWith(@"fine-code-coverage\build-output\"))
 				baseDirectory = string.Join(null, baseDirectory.SkipLast(@"fine-code-coverage\build-output\".Length));
-			string test = @$"{baseDirectory}..\..\tests\{callerName}.rr";
+			string test = @$"{baseDirectory}..\..\tests\{callerName}.sc";
 			if (!File.Exists(test))
 				Assert.Fail("No test file");
 

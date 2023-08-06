@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	internal abstract class GenericAttribute<T> : Attribute
 	{

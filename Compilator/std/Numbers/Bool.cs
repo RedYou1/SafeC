@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[Class("bool", "char", null, new string[] { "INumber" })]
 	public class Bool

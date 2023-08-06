@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[AttributeUsage(AttributeTargets.Class, AllowMultiple = false)]
 	internal class GenericClassAttribute : GenericAttribute<Class>, IClassAttribute

@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[Class("i8", "char", null, new string[] { "INumber" })]
 	public class Byte

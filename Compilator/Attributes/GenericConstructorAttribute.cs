@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace RedRust
+namespace SafeC
 {
 	[AttributeUsage(AttributeTargets.Method, AllowMultiple = false)]
 	internal class GenericConstructorAttribute : GenericAttribute<IFunc>, Implementable

@@ -5,8 +5,8 @@
 		<TargetFramework>net7.0</TargetFramework>
 		<ImplicitUsings>enable</ImplicitUsings>
 		<Nullable>enable</Nullable>
-		<AssemblyName>RedRust</AssemblyName>
-		<RootNamespace>RedRust</RootNamespace>
+		<AssemblyName>SafeC</AssemblyName>
+		<RootNamespace>SafeC</RootNamespace>
 		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
 		<AppendRuntimeIdentifierToOutputPath>false</AppendRuntimeIdentifierToOutputPath>
 	</PropertyGroup>

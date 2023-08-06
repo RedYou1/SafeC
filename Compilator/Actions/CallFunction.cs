@@ -1,7 +1,7 @@
 ﻿using PCRE;
 using System.Text;
 
-namespace RedRust
+namespace SafeC
 {
 	public class CallFunction : Action
 	{
@@ -132,7 +132,7 @@ namespace RedRust
 					for (int i = 0; i < gf.GenNames.Length; i++)
 						gen3.Add(gf.GenNames[i], IClass.IsClass(Compiler.Instance!.GetClass(gensConstructor[i], gen)));
 				}
-				else if (c is not RedRust.Func)
+				else if (c is not SafeC.Func)
 					throw new Exception();
 
 				Action[] args = new FileReader(getArgs(captures[9]).ToStdLine().ToArray()).Parse(fromC, fromF, gen3, from).Cast<Action>().ToArray();

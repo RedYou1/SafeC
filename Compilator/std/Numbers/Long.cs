@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[Class("i64", "long", null, new string[] { "INumber" })]
 	public class Long

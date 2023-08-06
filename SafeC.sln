@@ -5,14 +5,14 @@ VisualStudioVersion = 17.5.33414.496
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Compilator", "Compilator\Compilator.csproj", "{7DB44993-A374-48C0-8759-83BD399E9101}"
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Éléments de solution", "Éléments de solution", "{025587E8-97F1-4C84-868E-9CA22705C90D}"
-	ProjectSection(SolutionItems) = preProject
-		testRedRust\main.rr = testRedRust\main.rr
-	EndProjectSection
-EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "testC", "testC\testC.vcxproj", "{51617C0D-1865-47B2-AA1C-08008565A08A}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "UnitTests", "UnitTests\UnitTests.csproj", "{0122DC92-BCBD-4284-A6CB-366D9E4B5FBE}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "UnitTests", "UnitTests\UnitTests.csproj", "{0122DC92-BCBD-4284-A6CB-366D9E4B5FBE}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Éléments de solution", "Éléments de solution", "{BE4515E4-86AB-4B33-A23E-B2E7B20101C1}"
+	ProjectSection(SolutionItems) = preProject
+		testSafeC\main.sc = testSafeC\main.sc
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

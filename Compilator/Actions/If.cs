@@ -1,6 +1,6 @@
 ﻿using PCRE;
 
-namespace RedRust
+namespace SafeC
 {
 	internal class If : ActionContainer
 	{

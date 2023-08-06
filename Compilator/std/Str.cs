@@ -1,5 +1,5 @@
 ﻿
-namespace RedRust
+namespace SafeC
 {
 	[Class("str", "char*", null, new string[0])]
 	public class Str

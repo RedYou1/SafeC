@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[Class("u64", "unsigned long", null, new string[] { "INumber" })]
 	public class ULong

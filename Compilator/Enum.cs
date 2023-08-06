@@ -1,7 +1,7 @@
 ﻿using PCRE;
-using static RedRust.CastAttribute;
+using static SafeC.CastAttribute;
 
-namespace RedRust
+namespace SafeC
 {
 	public class Enum : Class
 	{

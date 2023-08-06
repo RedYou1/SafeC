@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[Class("i16", "short", null, new string[] { "INumber" })]
 	public class Short

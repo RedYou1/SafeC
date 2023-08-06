@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[AttributeUsage(AttributeTargets.Field, AllowMultiple = false)]
 	internal class VarAttribute : Attribute

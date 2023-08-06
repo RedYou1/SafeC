@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[Class("u32", "unsigned int", null, new string[] { "INumber" })]
 	public class UInt

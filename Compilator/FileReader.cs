@@ -1,7 +1,7 @@
 ﻿using PCRE;
 using System.Collections;
 
-namespace RedRust
+namespace SafeC
 {
 	public class FileReader : IEnumerable<string>
 	{

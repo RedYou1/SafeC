@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[Class("u8", "unsigned char", null, new string[] { "INumber" })]
 	public class UByte

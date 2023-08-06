@@ -1,7 +1,7 @@
 ﻿using PCRE;
 using System.Text;
 
-namespace RedRust
+namespace SafeC
 {
 	public class Declaration : Action
 	{

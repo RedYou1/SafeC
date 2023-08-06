@@ -1,4 +1,4 @@
-﻿namespace RedRust
+﻿namespace SafeC
 {
 	[Class("INumber", null, null, new string[0])]
 	public class INumber

@@ -5,7 +5,7 @@ using System.Runtime.CompilerServices;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace RedRust
+namespace SafeC
 {
 	public class CompileException : Exception { public CompileException(string message) : base(message) { } }
 

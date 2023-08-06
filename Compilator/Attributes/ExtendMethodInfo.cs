@@ -1,6 +1,6 @@
 ﻿using System.Reflection;
 
-namespace RedRust
+namespace SafeC
 {
 	public static class ExtendMethodInfo
 	{
