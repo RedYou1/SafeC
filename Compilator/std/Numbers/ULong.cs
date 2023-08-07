@@ -1,7 +1,7 @@
 ﻿namespace SafeC
 {
 	[Class("u64", "unsigned long", null, new string[] { "INumber" })]
-	public class ULong
+	internal class ULong
 	{
 		public static IEnumerable<StdLine> Variables() { return Enumerable.Empty<StdLine>(); }
 

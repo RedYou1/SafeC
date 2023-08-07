@@ -1,6 +1,6 @@
 ﻿namespace SafeC
 {
-	public class Type
+	internal class Type
 	{
 		public readonly Class Of;
 		public readonly bool Own;

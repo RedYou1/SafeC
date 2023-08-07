@@ -2,7 +2,7 @@
 
 namespace SafeC
 {
-	public class Asign : Action
+	internal class Asign : Action
 	{
 		public required string Name { get; init; }
 

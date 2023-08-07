@@ -2,7 +2,7 @@
 namespace SafeC
 {
 	[Class("str", "char*", null, new string[0])]
-	public class Str
+	internal class Str
 	{
 		public static IEnumerable<StdLine> Variables() { return Enumerable.Empty<StdLine>(); }
 

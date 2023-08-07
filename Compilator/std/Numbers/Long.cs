@@ -1,7 +1,7 @@
 ﻿namespace SafeC
 {
 	[Class("i64", "long", null, new string[] { "INumber" })]
-	public class Long
+	internal class Long
 	{
 		public static IEnumerable<StdLine> Variables() { return Enumerable.Empty<StdLine>(); }
 

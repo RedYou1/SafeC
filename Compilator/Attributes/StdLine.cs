@@ -1,6 +1,6 @@
 ﻿namespace SafeC
 {
-	public class StdLine
+	internal class StdLine
 	{
 		public readonly bool Unsafe;
 		public readonly string Line;

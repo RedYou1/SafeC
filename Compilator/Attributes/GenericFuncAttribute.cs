@@ -49,7 +49,7 @@ namespace SafeC
 			return new(c, Name, Params.Chunk(2).Count() + (c is null ? 0 : 1), gen,
 				Generics,
 				method.GetFuncDef,
-				gen2 => Compiler.Instance!.GetType(Return, c, gen2),
+				gen2 => Compiler.Instance!.GetType(Return, c, gen2, false),
 				gen2 =>
 				{
 					var v = Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen2), t[1]));

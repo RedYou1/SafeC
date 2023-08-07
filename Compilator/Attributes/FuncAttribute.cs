@@ -24,7 +24,7 @@ namespace SafeC
 
 		public (Type @return, Parameter[] @params) ApplyFunc(IClass? c, Dictionary<string, Class>? gen)
 		{
-			var @return = Compiler.Instance!.GetType(Return, c, gen);
+			var @return = Compiler.Instance!.GetType(Return, c, gen, false);
 			var @params = Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen), t[1])).ToArray();
 
 			return (@return, @params);

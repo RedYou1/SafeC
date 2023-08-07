@@ -1,6 +1,6 @@
 ﻿namespace SafeC
 {
-	public interface Action : Token
+	internal interface Action : Token
 	{
 		public Type ReturnType { get; }
 
@@ -21,7 +21,7 @@
 		}
 	}
 
-	public interface ActionContainer : Action
+	internal interface ActionContainer : Action
 	{
 		public IEnumerable<Action> Childs { get; }
 	}

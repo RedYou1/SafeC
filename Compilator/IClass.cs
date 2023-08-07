@@ -1,6 +1,6 @@
 ﻿namespace SafeC
 {
-	public interface IClass : Token
+	internal interface IClass : Token
 	{
 		public Class? Extends { get; set; }
 		public Class[] Implements { get; set; }

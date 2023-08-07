@@ -2,7 +2,7 @@
 
 namespace SafeC
 {
-	public static class ExtendMethodInfo
+	internal static class ExtendMethodInfo
 	{
 		public static IEnumerable<StdLine> ToStdLine(this IEnumerable<string> s)
 		{

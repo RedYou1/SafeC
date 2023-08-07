@@ -15,7 +15,7 @@
 		internal const string CALLFUNCREGEX = $@"^({GETVARREGEX})\((.*)\)$";
 		internal const string BASEREGEX = $@"^base\((.*)\)$";
 		internal const string IFREGEX = $@"^((else)|((else ){{0,1}}if ([^:]+))):$";
-		internal const string RETURNREGEX = $@"^return (.+)$";
+		internal const string RETURNREGEX = $@"^return( (.+)){{0,1}}$";
 		internal const string NEWREGEX = $@"^new(<((?&cl)(, (?&cl))*)>){{0,1}} {DEFNAMEREGEX}\((.*)\)$";
 
 		internal const string STRINGREGEX = "^\"(.*)\"$";

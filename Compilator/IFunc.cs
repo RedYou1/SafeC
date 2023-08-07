@@ -1,6 +1,6 @@
 ﻿namespace SafeC
 {
-	public class Parameter
+	internal class Parameter
 	{
 		public readonly Type Type;
 		public readonly string Name;
@@ -13,7 +13,7 @@
 		}
 	}
 
-	public interface IFunc : Token
+	internal interface IFunc : Token
 	{
 		public class CanCallReturn
 		{

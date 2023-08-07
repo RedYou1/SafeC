@@ -1,7 +1,7 @@
 ﻿namespace SafeC
 {
 	[Class("u32", "unsigned int", null, new string[] { "INumber" })]
-	public class UInt
+	internal class UInt
 	{
 		public static IEnumerable<StdLine> Variables() { return Enumerable.Empty<StdLine>(); }
 

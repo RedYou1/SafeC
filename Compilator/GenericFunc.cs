@@ -1,6 +1,6 @@
 ﻿namespace SafeC
 {
-	public class GenericFunc : IFunc
+	internal class GenericFunc : IFunc
 	{
 		public string Name { get; }
 		public readonly IClass? Class;

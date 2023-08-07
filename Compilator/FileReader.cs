@@ -3,7 +3,7 @@ using System.Collections;
 
 namespace SafeC
 {
-	public class FileReader : IEnumerable<string>
+	internal class FileReader : IEnumerable<string>
 	{
 		public readonly StdLine[] Lines;
 		public int Line;
@@ -45,7 +45,7 @@ namespace SafeC
 					var regex = Compiler.Instance!.Regexs.Select(kvp => (new PcreRegex(kvp.Key).Match(Current.Line), kvp.Value))
 						.Where(kvp => kvp.Item1.Success && kvp.Value.Item1(this, kvp.Item1, fromC, fromF, from)).ToArray();
 					if (regex.Length == 0 || regex.Length >= 2)
-						throw new Exception();
+						throw new CompileException($"{regex.Length} possibles actions with that line {Current.Line}");
 					yield return regex[0].Value.Item2(this, regex[0].Item1, fromC, fromF, gen, from);
 				}
 				Next();

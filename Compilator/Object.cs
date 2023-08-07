@@ -2,7 +2,7 @@
 
 namespace SafeC
 {
-	public class Object : Action
+	internal class Object : Action
 	{
 		public Type ReturnType { get; }
 

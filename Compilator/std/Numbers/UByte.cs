@@ -1,7 +1,7 @@
 ﻿namespace SafeC
 {
 	[Class("u8", "unsigned char", null, new string[] { "INumber" })]
-	public class UByte
+	internal class UByte
 	{
 		public static IEnumerable<StdLine> Variables() { return Enumerable.Empty<StdLine>(); }
 

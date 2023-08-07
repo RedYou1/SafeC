@@ -1,6 +1,6 @@
 ﻿namespace SafeC
 {
-	public class GenericClass : IClass
+	internal class GenericClass : IClass
 	{
 		public string Name { get; }
 		public string[] GenNames { get; }

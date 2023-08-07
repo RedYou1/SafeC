@@ -5,12 +5,12 @@ namespace SafeC
 {
 	public class Compiler
 	{
-		public readonly Class VOID;
-		public readonly Enum Classes;
+		internal readonly Class VOID;
+		internal readonly Enum Classes;
 
-		public Dictionary<string, Token> Tokens;
+		internal Dictionary<string, Token> Tokens;
 
-		public Dictionary<string, (Func<FileReader, PcreMatch, IClass?, Func?, Token[], bool>, Func<FileReader, PcreMatch, IClass?, Func?, Dictionary<string, Class>?, Token[], Token>)> Regexs;
+		internal Dictionary<string, (Func<FileReader, PcreMatch, IClass?, Func?, Token[], bool>, Func<FileReader, PcreMatch, IClass?, Func?, Dictionary<string, Class>?, Token[], Token>)> Regexs;
 
 		private Compiler()
 		{
@@ -35,7 +35,7 @@ namespace SafeC
 				{ Program.RETURNREGEX,((_,_,_,_,_)=>true,Return.Declaration) },
 				{ Program.BASEREGEX,((_,_,_,_,_)=>true,CallFunction.BaseDeclaration) },
 				{ Program.NEWREGEX,((_,_,_,_,_)=>true,CallFunction.NewDeclaration) },
-				{ Program.GETVARREGEX, ((lines,captures,_,_,_)=>captures.Value.Equals(lines.Current!.Line),Object.Declaration) },
+				{ Program.GETVARREGEX, ((lines,captures,_,_,_)=>captures.Value.Equals(lines.Current!.Line) && !captures.Value.Equals("return"),Object.Declaration) },
 				{ Program.STRINGREGEX,((_,_,_,_,_)=>true, (_,capture,_,_,_,_)=>new Object(GetType("str", null,null,false), capture.Value)) },
 				{ Program.NUMBERREGEX,((_,_,_,_,_)=>true, (_,capture,_,_,_,_)=>new Object(GetType(capture.Value.Contains('.') ? "f32" : "i32", null,null,false), capture.Value)) },
 				{ Program.MATHREGEX,((_,_,_,_,_)=>true, Object.MathDeclaration) }
@@ -65,7 +65,7 @@ namespace SafeC
 				yield return s;
 		}
 
-		public IClass? GetClassMaybe(string name, Dictionary<string, Class>? generic)
+		internal IClass? GetClassMaybe(string name, Dictionary<string, Class>? generic)
 		{
 			if (generic is not null && generic.TryGetValue(name, out var gc) && gc is not null)
 			{
@@ -98,7 +98,7 @@ namespace SafeC
 			return cc;
 		}
 
-		public IClass GetClass(string name, Dictionary<string, Class>? generic)
+		internal IClass GetClass(string name, Dictionary<string, Class>? generic)
 		{
 			IClass? c = GetClassMaybe(name, generic);
 			if (c is null)
@@ -106,10 +106,10 @@ namespace SafeC
 			return c;
 		}
 
-		public Class GetInterface(string name)
+		internal Class GetInterface(string name)
 			=> IClass.IsClass(GetClass(name, null));
 
-		public Type? GetTypeMaybe(string name, IClass? _this, Dictionary<string, Class>? generic, bool possessed = true)
+		internal Type? GetTypeMaybe(string name, IClass? _this, Dictionary<string, Class>? generic, bool possessed = true)
 		{
 			bool isNull = name.EndsWith('?');
 			if (isNull)
@@ -145,7 +145,7 @@ namespace SafeC
 			return new Type(cc, !dontOwn, isRef, isNull, typedyn || dyn, !dyn, possessed);
 		}
 
-		public Type GetType(string name, IClass? _this, Dictionary<string, Class>? generic, bool possessed = true)
+		internal Type GetType(string name, IClass? _this, Dictionary<string, Class>? generic, bool possessed = true)
 		{
 			var t = GetTypeMaybe(name, _this, generic, possessed);
 			if (t is null)
@@ -205,7 +205,7 @@ namespace SafeC
 			return v;
 		}
 
-		public void Init()
+		internal void Init()
 		{
 			foreach (var type in InitGenericClass().ToList())
 			{

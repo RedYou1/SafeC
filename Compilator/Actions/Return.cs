@@ -2,17 +2,17 @@
 
 namespace SafeC
 {
-	public class Return : Action
+	internal class Return : Action
 	{
 		public Type ReturnType => throw new NotImplementedException();
 
 		public string Name => throw new NotImplementedException();
 
-		public readonly Action Action;
+		public readonly IEnumerable<Action> Actions;
 
-		public Return(Action action)
+		public Return(IEnumerable<Action> actions)
 		{
-			Action = action;
+			Actions = actions;
 		}
 
 
@@ -21,24 +21,53 @@ namespace SafeC
 			if (fromF is null)
 				throw NotInRigthPlacesException.Func("Return");
 
-			Action a = new FileReader(captures[1].Value).Parse(fromC, fromF, gen, from).Cast<Action>().First();
-			//TODO
+			string returns = captures[2];
 
-			return new Return(a);
+			bool returnVoid = fromF.ReturnType.Of == Compiler.Instance!.VOID;
+
+			if (returnVoid != string.IsNullOrEmpty(returns))
+				if (returnVoid)
+					throw new CompileException($"Can't return {returns} in a void function");
+				else
+					throw new CompileException("You need to return something in a none void function");
+
+			if (returnVoid)
+				return new Return(Enumerable.Empty<Action>());
+
+			Action a = new FileReader(returns).Parse(fromC, fromF, gen, from).Cast<Action>().First();
+
+			IEnumerable<Action>? actions = fromF.ReturnType.Convert(a, fromF, gen);
+
+			if (actions is null)
+				throw new CompileException($"Can't convert the Type {a.ReturnType} to {fromF.ReturnType}");
+
+			return new Return(actions);
 		}
 
 		public IEnumerable<Token> ToInclude()
 		{
-			return Action.ToInclude();
+			foreach (var action in Actions)
+				foreach (var include in action.ToInclude())
+					yield return include;
 		}
 
 		public IEnumerable<string> Compile()
 		{
-			var s = Action.Compile();
-			foreach (var s2 in s.SkipLast(1))
+			if (!Actions.Any())
 			{
-				yield return s2;
+				yield return "return";
+				yield break;
 			}
+			IEnumerable<string> s;
+			foreach (var action in Actions.SkipLast(1))
+			{
+				s = action.Compile();
+				foreach (var s2 in s)
+					yield return s2;
+			}
+			s = Actions.Last().Compile();
+			foreach (var s2 in s.SkipLast(1))
+				yield return s2;
 			yield return $"return {s.Last()}";
 		}
 	}

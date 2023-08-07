@@ -1,6 +1,6 @@
 ﻿namespace SafeC
 {
-	public interface Token
+	internal interface Token
 	{
 		public string Name { get; }
 

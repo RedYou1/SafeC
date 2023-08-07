@@ -4,7 +4,7 @@
 		new string[] {
 			 "T"
 		})]
-	public class OwnTyped
+	internal class OwnTyped
 	{
 		public static IEnumerable<StdLine> Variables(Dictionary<string, Class> gen)
 		{
@@ -35,7 +35,7 @@
 		new string[] {
 			 "T"
 		})]
-	public class Typed
+	internal class Typed
 	{
 		public static IEnumerable<StdLine> Variables(Dictionary<string, Class> gen)
 		{

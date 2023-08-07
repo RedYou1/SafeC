@@ -1,6 +1,6 @@
 ﻿namespace SafeC
 {
-	public class StdUnsafe : Action
+	internal class StdUnsafe : Action
 	{
 		public Type ReturnType => throw new NotImplementedException();
 

@@ -1,6 +1,4 @@
-using Microsoft.VisualStudio.TestTools.UnitTesting;
 using SafeC;
-using System.Linq;
 using System.Runtime.CompilerServices;
 
 namespace UnitTests
@@ -73,5 +71,19 @@ namespace UnitTests
 
 		[TestMethod]
 		public void BigTestOK() => Test();
+
+		[TestMethod]
+		public void ReturnVoid() => Test();
+
+		[TestMethod]
+		public void ReturnError1() => Test(new CompileException("Can't return 0 in a void function"));
+
+		[TestMethod]
+		public void ReturnError2() => Test(new CompileException("You need to return something in a none void function"));
+
+		[TestMethod]
+		public void ReturnError3() => Test(new CompileException("Can't convert the Type A to int"));
+		[TestMethod]
+		public void ReturnError4() => Test(NotInRigthPlacesException.Func("Return"));
 	}
 }

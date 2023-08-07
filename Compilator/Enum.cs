@@ -3,7 +3,7 @@ using static SafeC.CastAttribute;
 
 namespace SafeC
 {
-	public class Enum : Class
+	internal class Enum : Class
 	{
 		public readonly List<string> Options = new();
 

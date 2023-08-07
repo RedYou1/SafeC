@@ -3,7 +3,7 @@ using System.Text;
 
 namespace SafeC
 {
-	public class CallFunction : Action
+	internal class CallFunction : Action
 	{
 		public Type ReturnType => Func.ReturnType ?? throw new Exception();
 

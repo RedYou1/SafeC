@@ -2,18 +2,18 @@
 
 namespace SafeC
 {
-	public class Func : IFunc
+	internal class Func : IFunc
 	{
 		public bool Included { get; set; }
 
 		public required string Name { get; init; }
-		public readonly Type? ReturnType;
+		public readonly Type ReturnType;
 		public readonly Parameter[] Params;
 		public readonly List<Action> Actions = new();
 
 		public readonly Dictionary<string, Object> Objects = new();
 
-		public Func(Type? returnType, Parameter[] _params, bool included = false)
+		public Func(Type returnType, Parameter[] _params, bool included = false)
 		{
 			Included = included;
 			ReturnType = returnType;

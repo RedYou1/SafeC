@@ -1,7 +1,7 @@
 ﻿namespace SafeC
 {
 	[Class("bool", "char", null, new string[] { "INumber" })]
-	public class Bool
+	internal class Bool
 	{
 		public static IEnumerable<StdLine> Variables() { return Enumerable.Empty<StdLine>(); }
 

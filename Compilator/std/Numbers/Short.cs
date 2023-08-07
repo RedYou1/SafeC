@@ -1,7 +1,7 @@
 ﻿namespace SafeC
 {
 	[Class("i16", "short", null, new string[] { "INumber" })]
-	public class Short
+	internal class Short
 	{
 		public static IEnumerable<StdLine> Variables() { return Enumerable.Empty<StdLine>(); }
 

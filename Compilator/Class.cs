@@ -2,7 +2,7 @@
 
 namespace SafeC
 {
-	public class Class : IClass, IEquatable<Class>
+	internal class Class : IClass, IEquatable<Class>
 	{
 		protected bool Included;
 
@@ -218,24 +218,24 @@ namespace SafeC
 						throw new Exception();
 					((Func)f).Actions.Add(a);
 				}
-				((Func)f).Actions.Add(new Return(((Func)f).Objects["this"]));
+				((Func)f).Actions.Add(new Return(new Action[] { ((Func)f).Objects["this"] }));
 			}
 			else
 			{
 				FileReader fr2 = new(fr.Lines.Prepend(new($"{fromC.Name} this", func => func.Objects.Add("this", new(type, "this")))).Append("return this").ToArray());
 				f = new GenericFunc(fromC, fname, string.IsNullOrWhiteSpace(_params[0]) ? 0 : _params.Length,
 					gen, gens.Split(", "),
-					_ =>
-					{
-						fr2.Line = 0;
-						return fr2;
-					},
-					_ => type,
-					gen2 => _params.Select(p =>
-					{
-						string[] p2 = p.Split(" ");
-						return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
-					}).ToArray());
+							_ =>
+							{
+								fr2.Line = 0;
+								return fr2;
+							},
+							_ => type,
+							gen2 => _params.Select(p =>
+							{
+								string[] p2 = p.Split(" ");
+								return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
+							}).ToArray());
 			}
 
 			fromC.Constructors.Add(f);

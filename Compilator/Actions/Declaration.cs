@@ -3,7 +3,7 @@ using System.Text;
 
 namespace SafeC
 {
-	public class Declaration : Action
+	internal class Declaration : Action
 	{
 		public Type Of;
 		public readonly Action? Action;
