@@ -12,7 +12,7 @@ namespace SafeC
 			"str", "this")]
 		public static IEnumerable<StdLine> Len()
 		{
-			yield return $"return StrLen(this)";
+			yield return new($"return strlen(this)", _ => { });
 		}
 
 		[Func(
@@ -22,7 +22,7 @@ namespace SafeC
 			"str", "s")]
 		public static IEnumerable<StdLine> StartsWith()
 		{
-			yield break;
+			yield return new("return strncmp(s, this, strlen(s)) == 0", _ => { });
 		}
 	}
 }

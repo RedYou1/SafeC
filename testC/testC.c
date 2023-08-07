@@ -123,6 +123,7 @@ B createB(Colors color) {
 	return b;
 }
 char StartsWith(char* this, char* s) {
+	return strncmp(s, this, strlen(s)) == 0;
 }
 unsigned long Len(char* this) {
 	return strlen(this);
