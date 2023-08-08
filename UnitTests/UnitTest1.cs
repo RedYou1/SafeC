@@ -6,6 +6,22 @@ namespace UnitTests
 	[TestClass]
 	public class UnitTest1
 	{
+		[TestMethod]
+		public void TestMain()
+		{
+			Assert.ThrowsException<Exception>(() => Program.Main(new string[] { }));
+			Assert.ThrowsException<Exception>(() => Program.Main(new string[] { "" }));
+			Assert.ThrowsException<Exception>(() => Program.Main(new string[] { "", "", "" }));
+			Assert.ThrowsException<Exception>(() => Program.Main(new string[] { "a", "b" }));
+			Assert.ThrowsException<Exception>(() => Program.Main(new string[] { "a.sc", "b" }));
+
+			string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
+			if (baseDirectory.EndsWith(@"fine-code-coverage\build-output\"))
+				baseDirectory = string.Join(null, baseDirectory.SkipLast(@"fine-code-coverage\build-output\".Length));
+			Assert.ThrowsException<Exception>(() => Program.Main(new string[] { $"{baseDirectory}..\\..\\..\\testSafeC\\main.sc", "b" }));
+			Program.Main(new string[] { $"{baseDirectory}..\\..\\..\\testSafeC\\main.sc", $"{baseDirectory}..\\..\\..\\testC\\testC.c" });
+		}
+
 		static void Test(Exception? expectedError = null, [CallerMemberName] string callerName = "")
 		{
 			string baseDirectory = AppDomain.CurrentDomain.BaseDirectory;
