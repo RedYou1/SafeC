@@ -28,7 +28,7 @@ namespace SafeC
 		public static IFunc Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromF is not null || from.Any())
-				throw new Exception();
+				throw NotInRigthPlacesException.NoFunc("Func");
 
 			string returnTypeString = captures[1];
 			Type returnType = Compiler.Instance!.GetType(returnTypeString, fromC, gen, false);

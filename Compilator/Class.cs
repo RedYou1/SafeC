@@ -61,7 +61,7 @@ namespace SafeC
 		public static IClass Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromC is not null || fromF is not null || from.Any())
-				throw new Exception();
+				throw NotInRigthPlacesException.NoParent("Class");
 
 			string[] m = captures[7].Value.Trim().Split(", ");
 			string name = captures[2];
@@ -141,7 +141,7 @@ namespace SafeC
 		public static IFunc ConstructorDeclaration(FileReader lines, PcreMatch captures, IClass? fromIC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromIC is not Class fromC)
-				throw new Exception();
+				throw NotInRigthPlacesException.Classe("Class Constructor");
 
 			string name = captures[2];
 			string gens = captures[4];

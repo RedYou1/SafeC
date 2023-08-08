@@ -10,7 +10,7 @@
 		public static Class IsClass(IClass c)
 		{
 			if (c is not Class cc)
-				throw new Exception();
+				throw new CompileException($"{c.Name} is not a Class");
 			return cc;
 		}
 

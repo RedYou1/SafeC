@@ -25,13 +25,15 @@ namespace SafeC
 		public static new Enum Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
 			if (fromC is not null || fromF is not null || from.Any())
-				throw new Exception();
+				throw NotInRigthPlacesException.NoParent("Enum");
 
 			var c = new Enum(captures[2]);
 			Compiler.Instance!.Tokens.Add(c.Name, c);
 
 			foreach (string t in lines.Extract())
 			{
+				if (!PcreRegex.Match(t, $"^{Program.NAMEREGEX}$").Success)
+					throw NotInRigthPlacesException.NoChild("Enum");
 				c.Options.Add(t);
 			}
 

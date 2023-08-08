@@ -72,13 +72,10 @@ namespace UnitTests
 
 		[TestMethod]
 		public void LockOK() => Test();
-
 		[TestMethod]
 		public void LockError1() => Test(new NoAccessException("a"));
-
 		[TestMethod]
 		public void LockError2() => Test(new NoAccessException("a"));
-
 		[TestMethod]
 		public void LockError3() => Test(new CompileException("Cant take ownership of possessed object"));
 
@@ -90,16 +87,38 @@ namespace UnitTests
 
 		[TestMethod]
 		public void ReturnVoid() => Test();
-
 		[TestMethod]
 		public void ReturnError1() => Test(new CompileException("Can't return 0 in a void function"));
-
 		[TestMethod]
 		public void ReturnError2() => Test(new CompileException("You need to return something in a none void function"));
-
 		[TestMethod]
 		public void ReturnError3() => Test(new CompileException("Can't convert the Type A to int"));
 		[TestMethod]
 		public void ReturnError4() => Test(NotInRigthPlacesException.Func("Return"));
+
+		[TestMethod]
+		public void FuncError1() => Test(NotInRigthPlacesException.NoFunc("Func"));
+
+		[TestMethod]
+		public void EnumError1() => Test(NotInRigthPlacesException.NoParent("Enum"));
+		[TestMethod]
+		public void EnumError2() => Test(NotInRigthPlacesException.NoParent("Enum"));
+		[TestMethod]
+		public void EnumError3() => Test(NotInRigthPlacesException.NoChild("Enum"));
+
+		[TestMethod]
+		public void ClassOK() => Test();
+		[TestMethod]
+		public void ClassError1() => Test(NotInRigthPlacesException.NoParent("Class"));
+		[TestMethod]
+		public void ClassError2() => Test(NotInRigthPlacesException.NoParent("Class"));
+		[TestMethod]
+		public void ClassError3() => Test(new CompileException("0 possibles actions with that line A():"));
+		[TestMethod]
+		public void ClassError4() => Test(NotInRigthPlacesException.Classe("Class Constructor"));
+		[TestMethod]
+		public void ClassError5() => Test(new CompileException("A is not a IClass"));
+		[TestMethod]
+		public void ClassError6() => Test(new CompileException("A is not a Class"));
 	}
 }

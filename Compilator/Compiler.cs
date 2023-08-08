@@ -75,7 +75,7 @@ namespace SafeC
 			if (Tokens.TryGetValue(name, out var token))
 			{
 				if (token is not IClass c)
-					throw new Exception();
+					throw new CompileException($"{token.Name} is not a IClass");
 				return c;
 			}
 
@@ -83,7 +83,7 @@ namespace SafeC
 				return null;
 			int start = name.LastIndexOf('<');
 			if (start == -1)
-				return null;
+				throw new Exception();
 
 			var cc = GetClass(name.Substring(0, start), generic);
 
