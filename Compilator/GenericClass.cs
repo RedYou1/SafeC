@@ -1,6 +1,6 @@
 ﻿namespace SafeC
 {
-	internal class GenericClass : IClass
+	internal class GenericClass : Generic<Class>, IClass
 	{
 		public string Name { get; }
 		public string[] GenNames { get; }
@@ -24,22 +24,6 @@
 			extends?.Childs.Add(this);
 		}
 
-		public readonly Dictionary<Class[], Class> Classes = new();
-
-		private Class? getClass(Class[] gen)
-		{
-			foreach (var kvp in Classes)
-			{
-				int i = 0;
-				for (; i < gen.Length; i++)
-					if (!kvp.Key[i].Equals(gen[i]))
-						break;
-				if (i == gen.Length)
-					return kvp.Value;
-			}
-			return null;
-		}
-
 		public Class GenerateClass(Class[] gen, out Dictionary<string, Class> ogen)
 		{
 			if (gen.Length != GenNames.Length)
@@ -49,12 +33,12 @@
 			for (int i = 0; i < GenNames.Length; i++)
 				ogen.Add(GenNames[i], gen[i]);
 
-			Class? t = getClass(gen);
+			Class? t = GetObject(gen);
 			if (t is not null)
 				return t;
 
 			Class c = new Class($"{Name}${string.Join('$', gen.Select(g => g.Name))}", null, Array.Empty<Class>());
-			Classes.Add(gen, c);
+			Objects.Add(gen, c);
 
 			foreach (Declaration d in Variables(c, ogen))
 				c.Variables.Add(d);

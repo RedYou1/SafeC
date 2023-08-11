@@ -1,13 +1,12 @@
 ﻿namespace SafeC
 {
-	internal class GenericFunc : IFunc
+	internal class GenericFunc : Generic<Func>, IFunc
 	{
 		public string Name { get; }
 		public readonly IClass? Class;
 
 		public readonly string[] GenNames;
 		public readonly int ParametersLen;
-		public readonly Dictionary<Dictionary<string, Class>, Func> Funcs;
 		public readonly Dictionary<string, Class>? Gen;
 		public readonly Func<Dictionary<string, Class>, FileReader> FileReader;
 		public readonly Func<Dictionary<string, Class>, Type> ReturnType;
@@ -23,7 +22,6 @@
 			Class = @class;
 			Name = name;
 			ParametersLen = parametersLen;
-			Funcs = new();
 			Gen = gen;
 			GenNames = genNames;
 			FileReader = fileReader;
@@ -31,25 +29,19 @@
 			Parameters = parameters;
 		}
 
-		private Func? getFunc(Dictionary<string, Class> g)
-		{
-			foreach (var kvp in Funcs)
-			{
-				foreach (var kvp2 in kvp.Key)
-					if (g.TryGetValue(kvp2.Key, out Class? c) &&
-						c is not null &&
-						c.Equals(kvp2.Value))
-						return kvp.Value;
-			}
-			return null;
-		}
-
 		public IFunc.CanCallReturn? CanCall(Func from, Dictionary<string, Class>? gen, params Action[] args)
 		{
 			if (ParametersLen != args.Length || gen is null)
 				return null;
 
-			Func? t = getFunc(gen);
+			Class[] classes = new Class[GenNames.Length];
+			for (int i = 0; i < GenNames.Length; i++)
+				if (gen.TryGetValue(GenNames[i], out Class? cls) && cls is not null)
+					classes[i] = cls;
+				else
+					throw new Exception();
+
+			Func? t = GetObject(classes);
 			if (t is not null)
 				return t.CanCall(from, gen, args);
 
@@ -73,7 +65,7 @@
 				t.Actions.Add(a);
 			}
 
-			Funcs.Add(gen, t);
+			Objects.Add(classes, t);
 			return t.CanCall(from, gen, args);
 		}
 
