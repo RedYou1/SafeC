@@ -60,7 +60,7 @@
 
 			foreach (Token ta in FileReader(gen3).Parse(Class, t, gen, Array.Empty<Token>()))
 			{
-				if (ta is not Action a)
+				if (ta is not ActionContainer a)
 					throw new Exception();
 				t.Actions.Add(a);
 			}

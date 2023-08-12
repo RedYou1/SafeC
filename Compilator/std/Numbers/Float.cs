@@ -10,5 +10,8 @@
 		{
 			yield return $"\"%f\", {ob}";
 		}
+
+		[Cast("f64")]
+		public static IEnumerable<StdLine> ToDouble(string ob) { yield return ob; }
 	}
 }

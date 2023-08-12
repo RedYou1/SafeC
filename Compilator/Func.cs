@@ -9,7 +9,7 @@ namespace SafeC
 		public required string Name { get; init; }
 		public readonly Type ReturnType;
 		public readonly Parameter[] Params;
-		public readonly List<Action> Actions = new();
+		public readonly List<ActionContainer> Actions = new();
 
 		public readonly Dictionary<string, Object> Objects = new();
 
@@ -98,7 +98,7 @@ namespace SafeC
 			{
 				foreach (var t in fr.Parse(fromC, rf, gen, Array.Empty<Token>()))
 				{
-					if (t is not Action a)
+					if (t is not ActionContainer a)
 						throw new Exception();
 					rf.Actions.Add(a);
 				}
@@ -112,7 +112,7 @@ namespace SafeC
 			if (Params.Length != args.Length)
 				return null;
 
-			IEnumerable<Action>[] converts = new IEnumerable<Action>[Params.Length];
+			IEnumerable<ActionContainer>[] converts = new IEnumerable<ActionContainer>[Params.Length];
 
 			for (int i = 0; i < Params.Length; i++)
 			{
@@ -146,7 +146,7 @@ namespace SafeC
 			Included = true;
 
 			yield return $"{(ReturnType is null ? "void" : ReturnType)} {Name}({string.Join(", ", Params.Select(p => $"{p.Type} {p.Name}"))}) {{";
-			foreach (Action a in Actions)
+			foreach (var a in Actions)
 				foreach (string s in a.Compile())
 					yield return $"\t{s}";
 			yield return "}";

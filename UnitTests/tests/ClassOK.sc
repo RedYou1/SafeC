@@ -1,3 +1,3 @@
-A<T>:
-B(A<i32>):
+class A<T>:
+class B(A<i32>):
 void main():

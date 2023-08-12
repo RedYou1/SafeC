@@ -10,9 +10,19 @@ namespace SafeC
 		public string Name => throw new NotImplementedException();
 
 		public readonly Func Func;
-		public readonly IEnumerable<Action>[] Args;
+		public readonly IEnumerable<ActionContainer>[] Args;
 
-		public CallFunction(Func func, IEnumerable<Action>[] args)
+		public IEnumerable<ActionContainer> SubActions
+		{
+			get
+			{
+				foreach (var action in Args)
+					foreach (var a in action)
+						yield return a;
+			}
+		}
+
+		public CallFunction(Func func, IEnumerable<ActionContainer>[] args)
 		{
 			Func = func;
 			Args = args;
@@ -164,9 +174,9 @@ namespace SafeC
 			bool not_first = false;
 			for (int i = 0; i < Args.Length; i++)
 			{
-				IEnumerable<Action> pp = Args[i];
+				IEnumerable<ActionContainer> pp = Args[i];
 
-				foreach (Action ppp in pp.SkipLast(1))
+				foreach (ActionContainer ppp in pp.SkipLast(1))
 					foreach (string sss in ppp.Compile())
 						yield return sss;
 

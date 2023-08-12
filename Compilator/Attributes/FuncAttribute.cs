@@ -61,7 +61,7 @@ namespace SafeC
 
 			foreach (Token ta in method.GetFuncDef(null).Parse(c, func, null, Array.Empty<Token>()))
 			{
-				if (ta is not Action a)
+				if (ta is not ActionContainer a)
 					throw new Exception();
 				func.Actions.Add(a);
 			}

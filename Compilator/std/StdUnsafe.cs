@@ -1,10 +1,10 @@
 ﻿namespace SafeC
 {
-	internal class StdUnsafe : Action
+	internal class StdUnsafe : ActionContainer
 	{
-		public Type ReturnType => throw new NotImplementedException();
-
 		public string Name => throw new NotImplementedException();
+
+		public IEnumerable<ActionContainer> SubActions => throw new NotImplementedException();
 
 		public readonly string Content;
 

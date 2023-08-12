@@ -17,9 +17,9 @@ namespace SafeC
 		public void Init()
 		{
 			Type t = new(IClass.IsClass(Compiler.Instance!.GetClass("i32", null)), true, false, false, false, true, false);
-			Casts.Add(t.Of, (Action a) => new CastAction(t, a, ob => new FileReader(ob)));
+			Casts.Add(t.Of, (Object a) => new CastAction(t, a, ob => new FileReader(ob)));
 			t = new(IClass.IsClass(Compiler.Instance!.GetClass("str", null)), true, false, false, false, true, false);
-			Casts.Add(t.Of, (Action a) => new CastAction(t, a, ob => new FileReader($"\"%i\", {ob}")));//TODO recursive?
+			Casts.Add(t.Of, (Object a) => new CastAction(t, a, ob => new FileReader($"\"%i\", {ob}")));//TODO recursive?
 		}
 
 		public static new Enum Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)

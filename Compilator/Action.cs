@@ -1,28 +1,27 @@
 ﻿namespace SafeC
 {
-	internal interface Action : Token
+	internal interface Action : ActionContainer
 	{
 		public Type ReturnType { get; }
-
-		public static IEnumerable<(IEnumerable<ActionContainer>, Return)> Returns(IEnumerable<Action> actions)
-		{
-			foreach (var action in actions)
-			{
-				if (action is ActionContainer c)
-				{
-					foreach (var item in Returns(c.Childs))
-						yield return (item.Item1.Prepend(c), item.Item2);
-				}
-				else if (action is Return r)
-				{
-					yield return (Enumerable.Empty<ActionContainer>(), r);
-				}
-			}
-		}
 	}
 
-	internal interface ActionContainer : Action
+	internal interface ActionContainer : Token
 	{
-		public IEnumerable<Action> Childs { get; }
+		public IEnumerable<ActionContainer> SubActions { get; }
+
+		public static IEnumerable<T> Gets<T>(ActionContainer action, bool seeSubSuccess)
+			where T : ActionContainer
+		{
+			if (action is T r)
+			{
+				yield return r;
+				if (!seeSubSuccess)
+					yield break;
+			}
+
+			foreach (var sub in action.SubActions)
+				foreach (var item in Gets<T>(sub, seeSubSuccess))
+					yield return item;
+		}
 	}
 }

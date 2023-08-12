@@ -10,5 +10,22 @@
 		{
 			yield return $"{ob} ? \"True\" : \"False\"";
 		}
+
+		[Cast("u8")]
+		public static IEnumerable<StdLine> ToUByte(string ob) { yield return ob; }
+		[Cast("u16")]
+		public static IEnumerable<StdLine> ToUShort(string ob) { yield return ob; }
+		[Cast("u32")]
+		public static IEnumerable<StdLine> ToUInt(string ob) { yield return ob; }
+		[Cast("u64")]
+		public static IEnumerable<StdLine> ToULong(string ob) { yield return ob; }
+		[Cast("i8")]
+		public static IEnumerable<StdLine> ToByte(string ob) { yield return ob; }
+		[Cast("i16")]
+		public static IEnumerable<StdLine> ToShort(string ob) { yield return ob; }
+		[Cast("i32")]
+		public static IEnumerable<StdLine> ToInt(string ob) { yield return ob; }
+		[Cast("i64")]
+		public static IEnumerable<StdLine> ToLong(string ob) { yield return ob; }
 	}
 }

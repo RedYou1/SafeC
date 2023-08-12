@@ -1,2 +1,2 @@
-A<T>:
-B(A):
+class A<T>:
+class B(A):

@@ -2,7 +2,7 @@
 
 namespace SafeC
 {
-	internal class Class : IClass, IEquatable<Class>
+	internal class Class : IClass, IEquatable<Class>, ActionContainer
 	{
 		protected bool Included;
 
@@ -11,18 +11,18 @@ namespace SafeC
 		public Class? Extends { get; set; }
 		public Class[] Implements { get; set; }
 
-		public Dictionary<Class, Func<Action, Action>> Casts = new();
+		public Dictionary<Class, Func<Object, Object>> Casts = new();
 
-		public readonly List<Declaration> Variables = new();
+		public readonly List<ActionContainer> Variables = new List<ActionContainer>();
 		public readonly Dictionary<string, IFunc> Funcs = new();
 		public readonly List<IFunc> Constructors = new();
 
-		public IEnumerable<Declaration> AllVariables
+		public IEnumerable<ActionContainer> SubActions
 		{
 			get
 			{
 				if (Extends is not null)
-					foreach (var v in Extends.AllVariables)
+					foreach (var v in Extends.SubActions)
 						yield return v;
 				foreach (var v in Variables)
 					yield return v;
@@ -85,18 +85,18 @@ namespace SafeC
 
 			var fr = lines.Extract();
 
-			IEnumerable<Declaration> Implement(Class cc, Dictionary<string, Class>? gen)
+			IEnumerable<ActionContainer> Implement(Class cc, Dictionary<string, Class>? gen)
 			{
 				fr.Line = 0;
 				foreach (var t in fr.Parse(cc, null, gen, Array.Empty<Token>()))
 				{
-					if (t is Declaration d)
+					if (t is ActionContainer d)
 						yield return d;
 				}
 			}
 
 			if (c is Class cc)
-				foreach (Declaration d in Implement(cc, null))
+				foreach (ActionContainer d in Implement(cc, null))
 					cc.Variables.Add(d);
 			else if (c is GenericClass gc)
 				gc.Variables = Implement;
@@ -125,11 +125,12 @@ namespace SafeC
 				yield break;
 			Included = true;
 
-			if (AllVariables.Any())
+			if (SubActions.Any())
 			{
 				yield return $"typedef struct {Name} {{";
-				foreach (var v in AllVariables)
-					yield return $"\t{v.ReturnType} {v.Name}";
+				foreach (var v in SubActions)
+					foreach (var t in v.Compile())
+						yield return $"\t{t}";
 				yield return $"}}{Name}";
 			}
 			else
@@ -169,7 +170,7 @@ namespace SafeC
 
 				foreach (var t in fr.Parse(fromC, (Func)f, gen, from))
 				{
-					if (t is not Action a)
+					if (t is not ActionContainer a)
 						throw new Exception();
 					((Func)f).Actions.Add(a);
 				}
@@ -214,7 +215,7 @@ namespace SafeC
 				((Func)f).Actions.Add(new Declaration(type, null) { Name = "this" });
 				foreach (var t in fr.Parse(fromC, (Func)f, gen, from))
 				{
-					if (t is not Action a)
+					if (t is not ActionContainer a)
 						throw new Exception();
 					((Func)f).Actions.Add(a);
 				}

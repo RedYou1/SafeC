@@ -13,6 +13,7 @@ A A_A_0() {
 typedef enum Classes {
 	Classes$INumber,
 	Classes$Colors,
+	Classes$Test,
 	Classes$A,
 	Classes$B,
 	Classes$C,
@@ -171,6 +172,35 @@ Container$Colors Container$Colors_Container_0$int(Colors a, int* b) {
 	Container$Colors_test$int(this, *b);
 	return this;
 }
+typedef struct Test {
+	unsigned char c;
+	union {
+		char a;
+		int b;
+	};
+}Test;
+Test Test_Test_0(char a) {
+	Test this;
+	this.c = 0;
+	this.a = a;
+	return this;
+}
+void Test_Print(Test this) {
+	if (this.c == 0) {
+		printf("%c", this.a);
+		printf("%c", '\n');
+	}
+	else {
+		printf("%i", this.b);
+		printf("%c", '\n');
+	}
+}
+Test Test_Test_1(int b) {
+	Test this;
+	this.c = 1;
+	this.b = b;
+	return this;
+}
 int main() {
 	A aa = A_A_0();
 	printf("%i", aa.a);
@@ -217,5 +247,10 @@ int main() {
 	printf("\n");
 	int _5 = 16;
 	Container$Colors_Container_0$int(Colors$red, &_5);
+	printf("%c", '\n');
+	Test t = Test_Test_0('A');
+	Test_Print(t);
+	t = Test_Test_1(45);
+	Test_Print(t);
 	return 0;
 }

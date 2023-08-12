@@ -20,6 +20,15 @@ namespace SafeC
 			}
 		}
 
+		public IEnumerable<ActionContainer> SubActions
+		{
+			get
+			{
+				if (Action is not null)
+					yield return Action;
+			}
+		}
+
 		public Declaration(Type of, Action? action)
 		{
 			Of = of;

@@ -6,13 +6,15 @@ namespace SafeC
 	{
 		public Type ReturnType { get; }
 
+		public IEnumerable<ActionContainer> SubActions => Enumerable.Empty<ActionContainer>();
+
 		private string _name;
-		public string Name => $"{_name}";
+		public virtual string Name => $"{_name}";
 
 		public Dictionary<string, Object> Objects;
 
 		private bool _Null;
-		public bool Null
+		public virtual bool Null
 		{
 			get => _Null;
 			set
@@ -24,7 +26,7 @@ namespace SafeC
 		}
 
 		private bool _Own;
-		public bool Own
+		public virtual bool Own
 		{
 			get => _Own;
 			set
@@ -42,9 +44,10 @@ namespace SafeC
 			set
 			{
 				_Of = value;
-				foreach (var v in _Of.AllVariables.Where(v => !Objects.ContainsKey(v.Name)))
+				var vars = ActionContainer.Gets<Action>(_Of, true);
+				foreach (var v in vars.Where(v => !Objects.ContainsKey(v.Name)))
 					Objects.Add(v.Name, new Object(v.ReturnType, $"{Name}{(ReturnType.DynTyped ? ".ptr" : "")}{(ReturnType.IsNotStack ? "->" : ".")}{v.Name}"));
-				foreach (var v in Objects.Keys.Where(v => !_Of.AllVariables.Any(a => v.Equals(a.Name))))
+				foreach (var v in Objects.Keys.Where(v => !vars.Any(a => v.Equals(a.Name))))
 					Objects.Remove(v);
 			}
 		}
@@ -53,7 +56,7 @@ namespace SafeC
 		{
 			_name = name;
 			ReturnType = returnType;
-			Objects = ReturnType.Of.AllVariables.ToDictionary(v => v.Name, v => new Object(v.ReturnType, $"{Name}{(ReturnType.DynTyped ? ".ptr" : "")}{(ReturnType.IsNotStack ? "->" : ".")}{v.Name}"));
+			Objects = ActionContainer.Gets<Action>(ReturnType.Of, true).ToDictionary(v => v.Name, v => new Object(v.ReturnType, $"{Name}{(ReturnType.DynTyped ? ".ptr" : "")}{(ReturnType.IsNotStack ? "->" : ".")}{v.Name}"));
 			_Of = ReturnType.Of;
 			_Own = own;
 			_Null = ReturnType.Null;
@@ -114,12 +117,12 @@ namespace SafeC
 				$"{o1.Name} {op} {o2.Name}");
 		}
 
-		public IEnumerable<Token> ToInclude()
+		public virtual IEnumerable<Token> ToInclude()
 		{
 			yield return Of;
 		}
 
-		public IEnumerable<string> Compile()
+		public virtual IEnumerable<string> Compile()
 		{
 			yield return Name;
 		}

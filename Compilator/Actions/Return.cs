@@ -8,11 +8,11 @@ namespace SafeC
 
 		public string Name => throw new NotImplementedException();
 
-		public readonly IEnumerable<Action> Actions;
+		public IEnumerable<ActionContainer> SubActions { get; }
 
-		public Return(IEnumerable<Action> actions)
+		public Return(IEnumerable<ActionContainer> actions)
 		{
-			Actions = actions;
+			SubActions = actions;
 		}
 
 
@@ -36,7 +36,7 @@ namespace SafeC
 
 			Action a = new FileReader(returns).Parse(fromC, fromF, gen, from).Cast<Action>().First();
 
-			IEnumerable<Action>? actions = fromF.ReturnType.Convert(a, fromF, gen);
+			IEnumerable<ActionContainer>? actions = fromF.ReturnType.Convert(a, fromF, gen);
 
 			if (actions is null)
 				throw new CompileException($"Can't convert the Type {a.ReturnType} to {fromF.ReturnType}");
@@ -46,26 +46,26 @@ namespace SafeC
 
 		public IEnumerable<Token> ToInclude()
 		{
-			foreach (var action in Actions)
+			foreach (var action in SubActions)
 				foreach (var include in action.ToInclude())
 					yield return include;
 		}
 
 		public IEnumerable<string> Compile()
 		{
-			if (!Actions.Any())
+			if (!SubActions.Any())
 			{
 				yield return "return";
 				yield break;
 			}
 			IEnumerable<string> s;
-			foreach (var action in Actions.SkipLast(1))
+			foreach (var action in SubActions.SkipLast(1))
 			{
 				s = action.Compile();
 				foreach (var s2 in s)
 					yield return s2;
 			}
-			s = Actions.Last().Compile();
+			s = SubActions.Last().Compile();
 			foreach (var s2 in s.SkipLast(1))
 				yield return s2;
 			yield return $"return {s.Last()}";

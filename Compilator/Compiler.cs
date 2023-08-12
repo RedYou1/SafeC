@@ -24,8 +24,9 @@ namespace SafeC
 
 			Regexs = new()
 			{
-				{ Program.CLASSDEFREGEX,((lines,_,_,_,_)=>!lines.Current!.Line.Equals("else:"),Class.Declaration) },
+				{ Program.CLASSDEFREGEX,((lines,_,_,_,_)=>true,Class.Declaration) },
 				{ Program.ENUMDEFREGEX,((lines,_,_,_,_)=>true, Enum.Declaration) },
+				{ Program.UNIONDEFREGEX,((lines,_,_,_,_)=>true, Union.Declaration) },
 				{ Program.FUNCDEFREGEX,((_,_,_,_,_)=>true,Func.Declaration) },
 				{ Program.CONSTRUCTORDEFREGEX,((_,captures,_,_,_)=> Tokens.TryGetValue(captures[2],out Token? t) && t is not null && t is IClass,Class.ConstructorDeclaration) },
 				{ Program.DECLARATIONREGEX,((lines,_,_,_,_)=>!lines.Current!.Line.StartsWith("return "),Declaration.Declaration_)},
@@ -36,8 +37,9 @@ namespace SafeC
 				{ Program.BASEREGEX,((_,_,_,_,_)=>true,CallFunction.BaseDeclaration) },
 				{ Program.NEWREGEX,((_,_,_,_,_)=>true,CallFunction.NewDeclaration) },
 				{ Program.GETVARREGEX, ((lines,captures,_,_,_)=>captures.Value.Equals(lines.Current!.Line) && !captures.Value.Equals("return"),Object.Declaration) },
+				{ Program.CHARREGEX,((_,_,_,_,_)=>true, (_,capture,_,_,_,_)=>new Object(GetType("char", null,null,false), capture.Value)) },
 				{ Program.STRINGREGEX,((_,_,_,_,_)=>true, (_,capture,_,_,_,_)=>new Object(GetType("str", null,null,false), capture.Value)) },
-				{ Program.NUMBERREGEX,((_,_,_,_,_)=>true, (_,capture,_,_,_,_)=>new Object(GetType(capture.Value.Contains('.') ? "f32" : "i32", null,null,false), capture.Value)) },
+				{ Program.NUMBERREGEX,((_,_,_,_,_)=>true, INumber.Declaration)},
 				{ Program.MATHREGEX,((_,_,_,_,_)=>true, Object.MathDeclaration) }
 			};
 		}
@@ -214,11 +216,11 @@ namespace SafeC
 				if (!Tokens.TryGetValue(type.Attribute.Name, out Token? tc) || tc is not GenericClass c)
 					throw new Exception();
 
-				IEnumerable<Declaration> Variables(Class c, Dictionary<string, Class>? gen)
+				IEnumerable<ActionContainer> Variables(Class c, Dictionary<string, Class>? gen)
 				{
 					foreach (Token t in v.GetFuncDef(gen).Parse(c, null, gen))
 					{
-						if (t is not Declaration d)
+						if (t is not ActionContainer d)
 							throw new Exception();
 						yield return d;
 					}
@@ -236,7 +238,7 @@ namespace SafeC
 
 				foreach (Token t in v.GetFuncDef(null).Parse(c, null, null, Array.Empty<Token>()))
 				{
-					if (t is not Declaration d)
+					if (t is not ActionContainer d)
 						throw new Exception();
 					c.Variables.Add(d);
 				}
@@ -279,7 +281,7 @@ namespace SafeC
 					yield return s;
 
 			foreach (string s in t.Compile())
-				yield return $"{s}{(!s.EndsWith('{') && !s.EndsWith('}') && !s.EndsWith(',') ? ";" : "")}";
+				yield return $"{s}{(!s.EndsWith('{') && !s.EndsWith('}') && !s.EndsWith(',') && !s.EndsWith(';') ? ";" : "")}";
 		}
 	}
 }

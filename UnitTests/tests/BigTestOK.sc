@@ -4,11 +4,11 @@ enum Colors:
 	yellow
 	green
 
-A:
+class A:
 	i32 a
 
 	A():
-		this.a = 1
+		this.a = 1i
 
 	A(i32 a):
 		this.a = a
@@ -19,7 +19,7 @@ A:
 	void Add2(*dyn this, i32 b):
 		this.a = this.a + b
 
-B:
+class B:
 	str b
 	Colors color
 
@@ -37,7 +37,7 @@ B:
 			print(this.color)
 		print("}\n")
 
-C(A):
+class C(A):
 	str id
 	B b
 
@@ -92,13 +92,13 @@ i32 main():
 	print(a.a)
 	print("\n")
 	
-	a = createC(5, "ID2")
-	a = createC(6, "ID2,1")
+	a = createC(5i, "ID2")
+	a = createC(6i, "ID2,1")
 	print(a.id)
 	print(":\n")
 	print(a.a)
 	print("\n")
-	a.Add2(5)
+	a.Add2(5i)
 	print(a.a)
 	print("\n")
 
@@ -109,5 +109,5 @@ i32 main():
 	b = createB(Colors.red)
 	b.Print()
 
-	a.Add2(5)
-	return 0
+	a.Add2(5i)
+	return 0i

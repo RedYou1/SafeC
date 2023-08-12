@@ -1,4 +1,4 @@
-A:
+class A:
 	A():
 		print("")
 i32 main():

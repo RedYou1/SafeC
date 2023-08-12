@@ -2,17 +2,17 @@
 
 namespace SafeC
 {
-	internal class Asign : Action
+	internal class Asign : ActionContainer
 	{
 		public required string Name { get; init; }
 
 		public Type ReturnType => throw new NotImplementedException();
 
-		public readonly IEnumerable<Action> Actions;
+		public IEnumerable<ActionContainer> SubActions { get; }
 
-		public Asign(IEnumerable<Action> actions)
+		public Asign(IEnumerable<ActionContainer> actions)
 		{
-			Actions = actions;
+			SubActions = actions;
 		}
 
 		public static Asign Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
@@ -26,10 +26,10 @@ namespace SafeC
 				throw new NoAccessException(ob.Name);
 
 			Action a = new FileReader(captures[9].Value).Parse(fromC, fromF, gen, from).Cast<Action>().First();
-			IEnumerable<Action>? c = ob.ReturnType.Convert(a, fromF, gen);
+			IEnumerable<ActionContainer>? c = ob.ReturnType.Convert(a, fromF, gen);
 
 			if (c is null)
-				throw new Exception();
+				throw new CompileException($"Can't convert {a.Name} into {ob.ReturnType}");
 
 			return new Asign(c)
 			{ Name = ob.Name };
@@ -37,18 +37,18 @@ namespace SafeC
 
 		public IEnumerable<Token> ToInclude()
 		{
-			foreach (Action action in Actions)
+			foreach (ActionContainer action in SubActions)
 				foreach (Token t in action.ToInclude())
 					yield return t;
 		}
 
 		public IEnumerable<string> Compile()
 		{
-			foreach (Action a in Actions.SkipLast(1))
+			foreach (ActionContainer a in SubActions.SkipLast(1))
 				foreach (string sss in a.Compile())
 					yield return sss;
 
-			var s = Actions.Last().Compile();
+			var s = SubActions.Last().Compile();
 			foreach (string ss in s.SkipLast(1))
 				yield return ss;
 			yield return $"{Name} = {s.Last()}";

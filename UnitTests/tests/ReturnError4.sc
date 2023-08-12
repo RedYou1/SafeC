@@ -1,2 +1,2 @@
-A:
+class A:
 	return

@@ -10,5 +10,12 @@
 		{
 			yield return $"\"%u\", {ob}";
 		}
+
+		[Cast("u16")]
+		public static IEnumerable<StdLine> ToUShort(string ob) { yield return ob; }
+		[Cast("u32")]
+		public static IEnumerable<StdLine> ToUInt(string ob) { yield return ob; }
+		[Cast("u64")]
+		public static IEnumerable<StdLine> ToULong(string ob) { yield return ob; }
 	}
 }

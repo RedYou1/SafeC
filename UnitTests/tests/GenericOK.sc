@@ -4,7 +4,7 @@ enum Colors:
 	yellow
 	green
 
-Container<T>:
+class Container<T>:
 	T a
 
 	Container<V>(T a, *V b):
@@ -19,7 +19,7 @@ Container<T>:
 		print("}")
 
 i32 main():
-	new<Colors> Container<i32>(32, Colors.blue)
+	new<Colors> Container<i32>(32i, Colors.blue)
 	print("\n")
-	new<i32> Container<Colors>(Colors.red, 16)
-	return 0
+	new<i32> Container<Colors>(Colors.red, 16i)
+	return 0i

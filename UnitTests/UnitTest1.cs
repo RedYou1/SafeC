@@ -120,5 +120,8 @@ namespace UnitTests
 		public void ClassError5() => Test(new CompileException("A is not a IClass"));
 		[TestMethod]
 		public void ClassError6() => Test(new CompileException("A is not a Class"));
+
+		[TestMethod]
+		public void UnionOK() => Test();
 	}
 }

@@ -7,9 +7,9 @@
 		public Class? Extends { get; set; }
 		public Class[] Implements { get; set; }
 
-		public Func<Class, Dictionary<string, Class>, IEnumerable<Declaration>> Variables = null!;
+		public Func<Class, Dictionary<string, Class>, IEnumerable<ActionContainer>> Variables = null!;
 		public List<Func<Class, Dictionary<string, Class>, IFunc>> Constructors = new();
-		public List<Func<Class, Dictionary<string, Class>, (Class, Func<Action, Action>)>> Casts = new();
+		public List<Func<Class, Dictionary<string, Class>, (Class, Func<Object, Object>)>> Casts = new();
 		public List<Func<Class, Dictionary<string, Class>, IFunc>> Funcs = new();
 
 		public List<IClass> Childs { get; } = new();
@@ -40,13 +40,13 @@
 			Class c = new Class($"{Name}${string.Join('$', gen.Select(g => g.Name))}", null, Array.Empty<Class>());
 			Objects.Add(gen, c);
 
-			foreach (Declaration d in Variables(c, ogen))
+			foreach (ActionContainer d in Variables(c, ogen))
 				c.Variables.Add(d);
 
 			foreach (Func<Class, Dictionary<string, Class>, IFunc> f in Constructors)
 				c.Constructors.Add(f(c, ogen));
 
-			foreach (Func<Class, Dictionary<string, Class>, (Class, Func<Action, Action>)> f in Casts)
+			foreach (Func<Class, Dictionary<string, Class>, (Class, Func<Object, Object>)> f in Casts)
 			{
 				var ff = f(c, ogen);
 				c.Casts.Add(ff.Item1, ff.Item2);

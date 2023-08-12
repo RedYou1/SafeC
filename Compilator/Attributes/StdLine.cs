@@ -13,7 +13,7 @@
 			Action = null;
 		}
 
-		public StdLine(string line, Action<Func> action)
+		public StdLine(string line, Action<Func>? action = null)
 		{
 			Unsafe = true;
 			Line = line;

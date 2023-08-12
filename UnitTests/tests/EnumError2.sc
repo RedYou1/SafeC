@@ -1,3 +1,3 @@
-B:
+class B:
 	enum A:
 		A

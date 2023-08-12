@@ -47,7 +47,7 @@
 			return false;
 		}
 
-		public IEnumerable<Action>? Convert(Action other, Func from, Dictionary<string, Class>? gen)
+		public IEnumerable<ActionContainer>? Convert(Action other, Func from, Dictionary<string, Class>? gen)
 		{
 			Object? ob = other as Object;
 
@@ -79,8 +79,9 @@
 				else
 					return null;
 
-			if (other.ReturnType.Of.Casts.TryGetValue(Of, out Func<Action, Action>? a) && a is not null)
-				return Convert(a(other), from, gen);
+			if (ob is not null &&
+				ob.Of.Casts.TryGetValue(Of, out Func<Object, Object>? a) && a is not null)
+				return Convert(a(ob), from, gen);
 
 			if (!Convert(other.ReturnType.Of))
 				return null;

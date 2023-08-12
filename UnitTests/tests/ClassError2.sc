@@ -1,3 +1,3 @@
-B:
-	A:
+class B:
+	class A:
 		A

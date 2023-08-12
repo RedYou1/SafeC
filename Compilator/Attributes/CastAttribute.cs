@@ -14,14 +14,14 @@ namespace SafeC
 
 		public Type ApplyFunc(Dictionary<string, Class>? gen)
 		{
-			var @return = Compiler.Instance!.GetType(Return, null, gen);
+			var @return = Compiler.Instance!.GetType(Return, null, gen, false);
 			return @return;
 		}
 
-		(Type @return, Func<Action, Action> action) getAction(MethodInfo method, Dictionary<string, Class>? gen)
+		(Type @return, Func<Object, Object> action) getAction(MethodInfo method, Dictionary<string, Class>? gen)
 		{
 			var @return = ApplyFunc(gen);
-			var action = (Action a) => new CastAction(@return, a, ob => method.GetCastDef(ob));
+			var action = (Object a) => new CastAction(@return, a, ob => method.GetCastDef(ob));
 			return (@return, action);
 		}
 
@@ -47,35 +47,35 @@ namespace SafeC
 				throw new Exception();
 		}
 
-		public class CastAction : Action
+		public class CastAction : Object
 		{
-			public Type ReturnType { get; }
-
-			public string Name => throw new NotImplementedException();
-
-			public readonly Action Action;
+			public readonly Object Object;
 			public readonly Func<string, FileReader> Func;
 
-			public CastAction(Type returnType, Action action, Func<string, FileReader> func)
+			public override bool Null { get => Object.Null; set => Object.Null = value; }
+			public override bool Own { get => Object.Own; set => Object.Own = value; }
+			public override string Name => Object.Name;
+
+			public CastAction(Type returnType, Object ob, Func<string, FileReader> func)
+				: base(returnType, null!)
 			{
-				ReturnType = returnType;
-				Action = action;
+				Object = ob;
 				Func = func;
 			}
 
-			public IEnumerable<string> Compile()
+			public override IEnumerable<string> Compile()
 			{
-				var a = Action.Compile();
+				var a = Object.Compile();
 				foreach (var c in a.SkipLast(1))
 					yield return c;
 				foreach (string s in Func(a.Last()))
 					yield return s;
 			}
 
-			public IEnumerable<Token> ToInclude()
+			public override IEnumerable<Token> ToInclude()
 			{
 				yield return ReturnType.Of;
-				foreach (var c in Action.ToInclude())
+				foreach (var c in Object.ToInclude())
 					yield return c;
 			}
 		}

@@ -18,9 +18,9 @@
 		public class CanCallReturn
 		{
 			public readonly Func Func;
-			public readonly IEnumerable<Action>[] Args;
+			public readonly IEnumerable<ActionContainer>[] Args;
 
-			public CanCallReturn(Func func, IEnumerable<Action>[] args)
+			public CanCallReturn(Func func, IEnumerable<ActionContainer>[] args)
 			{
 				Func = func;
 				Args = args;

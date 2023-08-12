@@ -10,5 +10,8 @@
 		{
 			yield return $"\"%u\", {ob}";
 		}
+
+		[Cast("u64")]
+		public static IEnumerable<StdLine> ToULong(string ob) { yield return ob; }
 	}
 }

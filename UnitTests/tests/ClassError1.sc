@@ -1,3 +1,3 @@
 void main():
-	A:
+	class A:
 		A

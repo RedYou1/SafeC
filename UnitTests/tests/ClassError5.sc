@@ -1,2 +1,2 @@
 void A():
-B(A):
+class B(A):
