@@ -40,7 +40,6 @@ namespace SafeC
 			if (fromC is null && fromF is null)
 				throw NotInRigthPlacesException.Method("Declaration");
 
-			var r = Compiler.Instance!.GetType(captures[1], fromC, gen);
 
 			Action? current = null;
 			if (!string.IsNullOrEmpty(captures[13]))
@@ -48,8 +47,9 @@ namespace SafeC
 				current = new FileReader(captures[13].Value).Parse(fromC, fromF, gen, from).First() as Action;
 				if (current is null)
 					throw new Exception();
-				r.Possessed = current.ReturnType.Possessed;
 			}
+
+			var r = Compiler.Instance!.GetType(captures[1], fromC, gen, current?.ReturnType.Possessed ?? fromF is null);
 
 			var d = new Declaration(r, current) { Name = captures[11] };
 

@@ -25,7 +25,7 @@ namespace SafeC
 		public (Type @return, Parameter[] @params) ApplyFunc(IClass? c, Dictionary<string, Class>? gen)
 		{
 			var @return = Compiler.Instance!.GetType(Return, c, gen, false);
-			var @params = Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen), t[1])).ToArray();
+			var @params = Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen, false), t[1])).ToArray();
 
 			return (@return, @params);
 		}
@@ -42,7 +42,7 @@ namespace SafeC
 			{
 				if (Compiler.Instance!.GetClass(c2.Name, null) is not GenericClass gc)
 					throw new Exception();
-				gc.Funcs.Add((c, gen) => implement(method, c.Funcs.Add, c, gen));
+				gc.Funcs.Add((c, gen) => implement(method, (_, _) => { }, c, gen));
 			}
 			else
 			{
@@ -59,7 +59,7 @@ namespace SafeC
 
 			impl(Name, func);
 
-			foreach (Token ta in method.GetFuncDef(null).Parse(c, func, null, Array.Empty<Token>()))
+			foreach (Token ta in method.GetFuncDef(gen).Parse(c, func, null, Array.Empty<Token>()))
 			{
 				if (ta is not ActionContainer a)
 					throw new Exception();

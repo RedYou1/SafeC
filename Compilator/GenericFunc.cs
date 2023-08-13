@@ -29,11 +29,8 @@
 			Parameters = parameters;
 		}
 
-		public IFunc.CanCallReturn? CanCall(Func from, Dictionary<string, Class>? gen, params Action[] args)
+		public Func? GenerateFunc(Dictionary<string, Class> gen)
 		{
-			if (ParametersLen != args.Length || gen is null)
-				return null;
-
 			Class[] classes = new Class[GenNames.Length];
 			for (int i = 0; i < GenNames.Length; i++)
 				if (gen.TryGetValue(GenNames[i], out Class? cls) && cls is not null)
@@ -43,8 +40,7 @@
 
 			Func? t = GetObject(classes);
 			if (t is not null)
-				return t.CanCall(from, gen, args);
-
+				return t;
 
 			Dictionary<string, Class> gen3 = new(gen);
 			if (Gen is not null)
@@ -56,7 +52,7 @@
 
 
 			t = new Func(@return, @params)
-			{ Name = $"{Name}${string.Join('$', gen.Select(g => g.Value.Name))}" };
+			{ Name = $"{Name}${string.Join('$', gen.Select(g => g.Value.TypeName))}" };
 
 			foreach (Token ta in FileReader(gen3).Parse(Class, t, gen, Array.Empty<Token>()))
 			{
@@ -66,7 +62,15 @@
 			}
 
 			Objects.Add(classes, t);
-			return t.CanCall(from, gen, args);
+			return t;
+		}
+
+		public IFunc.CanCallReturn? CanCall(Func from, Dictionary<string, Class>? gen, params Action[] args)
+		{
+			if (ParametersLen != args.Length || gen is null)
+				return null;
+
+			return GenerateFunc(gen)?.CanCall(from, gen, args);
 		}
 
 		public IEnumerable<string> Compile()

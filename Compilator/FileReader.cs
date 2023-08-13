@@ -36,10 +36,8 @@ namespace SafeC
 				if (Current.Unsafe)
 				{
 					yield return new StdUnsafe(Current.Line);
-					if (fromF is null)
-						throw new Exception();
 					if (Current.Action is not null)
-						Current.Action(fromF);
+						Current.Action(fromC, fromF);
 				}
 				else
 				{

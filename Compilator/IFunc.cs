@@ -8,7 +8,6 @@
 		public Parameter(Type type, string name)
 		{
 			Type = type;
-			type.Possessed = false;
 			Name = name;
 		}
 	}

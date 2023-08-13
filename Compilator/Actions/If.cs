@@ -12,7 +12,7 @@ namespace SafeC
 
 		public IEnumerable<ActionContainer> SubActions => Actions;
 
-		private string condition = string.Empty;
+		private Token? condition;
 
 		public static If Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
 		{
@@ -48,7 +48,7 @@ namespace SafeC
 						_null = true;
 						if (!obj.Null)
 							throw new Exception();
-						f.condition = $"{obj.Name} == 0";
+						f.condition = new StdUnsafe($"{obj.Name} == 0");
 					}
 					else if (ss[1].Equals("not null"))
 					{
@@ -56,7 +56,7 @@ namespace SafeC
 						if (!obj.Null)
 							throw new Exception();
 						obj.Null = false;
-						f.condition = $"{obj.Name} != 0";
+						f.condition = new StdUnsafe($"{obj.Name} != 0");
 					}
 
 					if (!_null && !not_null)
@@ -72,7 +72,7 @@ namespace SafeC
 						_class = obj.Of;
 						obj.Of = IClass.IsClass(Compiler.Instance!.GetClass(c[0], gen));
 
-						f.condition = $"{obj.Name}.type {(not_class ? "!" : "=")}= Classes${obj.Of.Name}";
+						f.condition = new StdUnsafe($"{obj.Name}.type {(not_class ? "!" : "=")}= Classes${obj.Of.TypeName}", Compiler.Instance!.Classes);
 
 						if (!not_class)
 						{
@@ -111,10 +111,16 @@ namespace SafeC
 					if (obj2.Of.Implements.FirstOrDefault()?.Name.Equals("INumber") is not true)
 						throw new Exception();
 
-					f.condition = $"{obj.Name} == {obj2.Name}";
+					f.condition = new StdUnsafe($"{obj.Name} == {obj2.Name}");
 				}
 				else
-					throw new Exception();
+				{
+					Action cf = new FileReader(s).Parse(fromC, fromF, gen, from).Cast<Action>().First();
+					if (!cf.ReturnType.Of.Name.Equals("bool"))
+						throw new Exception();
+
+					f.condition = cf;
+				}
 			}
 			else if (!captures.Value.Equals("else:"))
 				throw new Exception();
@@ -145,6 +151,9 @@ namespace SafeC
 
 		public IEnumerable<Token> ToInclude()
 		{
+			if (condition is not null)
+				foreach (Token t in condition.ToInclude())
+					yield return t;
 			foreach (ActionContainer a in Actions)
 				foreach (Token t in a.ToInclude())
 					yield return t;
@@ -152,10 +161,15 @@ namespace SafeC
 
 		public IEnumerable<string> Compile()
 		{
-			if (condition.Length == 0)
+			if (condition is null)
 				yield return "else {";
 			else
-				yield return $"if ({condition}) {{";
+			{
+				IEnumerable<string> s = condition.Compile();
+				foreach (string ss in s.SkipLast(1))
+					yield return ss;
+				yield return $"if ({s.Last()}) {{";
+			}
 
 			foreach (Action a in Actions)
 				foreach (string s in a.Compile())

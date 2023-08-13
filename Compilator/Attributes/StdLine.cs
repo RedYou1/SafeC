@@ -4,7 +4,7 @@
 	{
 		public readonly bool Unsafe;
 		public readonly string Line;
-		public readonly Action<Func>? Action;
+		public readonly Action<IClass?, Func?>? Action;
 
 		private StdLine(bool @unsafe, string line)
 		{
@@ -13,7 +13,7 @@
 			Action = null;
 		}
 
-		public StdLine(string line, Action<Func>? action = null)
+		public StdLine(string line, Action<IClass?, Func?>? action = null)
 		{
 			Unsafe = true;
 			Line = line;

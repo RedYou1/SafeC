@@ -8,7 +8,7 @@ namespace SafeC
 		public readonly List<string> Options = new();
 
 		public Enum(string name, bool init = true, bool included = false)
-			: base(name, null, Array.Empty<Class>(), included)
+			: base(name, name, null, Array.Empty<Class>(), included)
 		{
 			if (init)
 				Init();
@@ -17,9 +17,9 @@ namespace SafeC
 		public void Init()
 		{
 			Type t = new(IClass.IsClass(Compiler.Instance!.GetClass("i32", null)), true, false, false, false, true, false);
-			Casts.Add(t.Of, (Object a) => new CastAction(t, a, ob => new FileReader(ob)));
+			Casts.Add(t.Of, (IObject a) => new CastAction(t, a, ob => new FileReader(ob)));
 			t = new(IClass.IsClass(Compiler.Instance!.GetClass("str", null)), true, false, false, false, true, false);
-			Casts.Add(t.Of, (Object a) => new CastAction(t, a, ob => new FileReader($"\"%i\", {ob}")));//TODO recursive?
+			Casts.Add(t.Of, (IObject a) => new CastAction(t, a, ob => new FileReader($"\"%i\", {ob}")));//TODO recursive?
 		}
 
 		public static new Enum Declaration(FileReader lines, PcreMatch captures, IClass? fromC, Func? fromF, Dictionary<string, Class>? gen, Token[] from)
@@ -28,7 +28,7 @@ namespace SafeC
 				throw NotInRigthPlacesException.NoParent("Enum");
 
 			var c = new Enum(captures[2]);
-			Compiler.Instance!.Tokens.Add(c.Name, c);
+			Compiler.Instance!.Tokens.Add(c.TypeName, c);
 
 			foreach (string t in lines.Extract())
 			{
@@ -46,10 +46,10 @@ namespace SafeC
 				yield break;
 			Included = true;
 
-			yield return $"typedef enum {Name} {{";
+			yield return $"typedef enum {TypeName} {{";
 			foreach (var v in Options)
-				yield return $"\t{Name}${v},";
-			yield return $"}}{Name}";
+				yield return $"\t{TypeName}${v},";
+			yield return $"}}{TypeName}";
 		}
 	}
 }

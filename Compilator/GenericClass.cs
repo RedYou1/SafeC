@@ -9,7 +9,7 @@
 
 		public Func<Class, Dictionary<string, Class>, IEnumerable<ActionContainer>> Variables = null!;
 		public List<Func<Class, Dictionary<string, Class>, IFunc>> Constructors = new();
-		public List<Func<Class, Dictionary<string, Class>, (Class, Func<Object, Object>)>> Casts = new();
+		public List<Func<Class, Dictionary<string, Class>, (Class, Func<IObject, IObject>)>> Casts = new();
 		public List<Func<Class, Dictionary<string, Class>, IFunc>> Funcs = new();
 
 		public List<IClass> Childs { get; } = new();
@@ -37,7 +37,7 @@
 			if (t is not null)
 				return t;
 
-			Class c = new Class($"{Name}${string.Join('$', gen.Select(g => g.Name))}", null, Array.Empty<Class>());
+			Class c = new Class($"{Name}<{string.Join(", ", gen.Select(g => g.Name))}>", $"{Name}${string.Join('$', gen.Select(g => g.Name))}", null, Array.Empty<Class>());
 			Objects.Add(gen, c);
 
 			foreach (ActionContainer d in Variables(c, ogen))
@@ -46,7 +46,7 @@
 			foreach (Func<Class, Dictionary<string, Class>, IFunc> f in Constructors)
 				c.Constructors.Add(f(c, ogen));
 
-			foreach (Func<Class, Dictionary<string, Class>, (Class, Func<Object, Object>)> f in Casts)
+			foreach (Func<Class, Dictionary<string, Class>, (Class, Func<IObject, IObject>)> f in Casts)
 			{
 				var ff = f(c, ogen);
 				c.Casts.Add(ff.Item1, ff.Item2);

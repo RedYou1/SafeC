@@ -30,6 +30,10 @@ namespace SafeC
 			if (fromF is not null || from.Any())
 				throw NotInRigthPlacesException.NoFunc("Func");
 
+			Class? fc = fromC as Class;
+			if (fc is null != fromC is null)
+				throw new Exception();
+
 			string returnTypeString = captures[1];
 			Type returnType = Compiler.Instance!.GetType(returnTypeString, fromC, gen, false);
 
@@ -48,7 +52,7 @@ namespace SafeC
 				gens = fRawName.Substring(tname + 1, fRawName.Length - tname - 2).Split(", ");
 			}
 
-			name = $"{(fromC is null ? "" : $"{fromC.Name}_")}{name}";
+			name = $"{(fc is null ? "" : $"{fc.TypeName}_")}{name}";
 
 			var fr = lines.Extract();
 
@@ -63,7 +67,7 @@ namespace SafeC
 							string[] p2 = p.Split(" ");
 							if (p2.Last().Contains("this"))
 								p2 = p2.Append("this").ToArray();
-							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
+							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen, false), p2.Last());
 						}).ToArray())
 				{
 					Name = name
@@ -84,7 +88,7 @@ namespace SafeC
 							string[] p2 = p.Split(" ");
 							if (p2.Last().Contains("this"))
 								p2 = p2.Append("this").ToArray();
-							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
+							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2, false), p2.Last());
 						}).ToArray());
 			}
 

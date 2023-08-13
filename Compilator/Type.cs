@@ -8,7 +8,7 @@
 		public readonly bool Null;
 		public readonly bool CanBeChild;
 		public readonly bool CanCallFunc;
-		public bool Possessed;
+		public readonly bool Possessed;
 
 
 		public bool IsPtr => !DynTyped && IsNotStack;
@@ -49,12 +49,12 @@
 
 		public IEnumerable<ActionContainer>? Convert(Action other, Func from, Dictionary<string, Class>? gen)
 		{
-			Object? ob = other as Object;
+			IObject? ob = other as IObject;
 
 			if (ob is not null && !ob.Own)
 				throw new NoAccessException(ob.Name);
 
-			if (Own && other.ReturnType.Possessed && !Of.Name.Equals("char*"))
+			if (Own && other.ReturnType.Possessed && !Of.Name.Equals("str"))
 				throw new CompileException("Cant take ownership of possessed object");
 
 			if (other.ReturnType.Of == Compiler.Instance!.VOID)
@@ -80,7 +80,7 @@
 					return null;
 
 			if (ob is not null &&
-				ob.Of.Casts.TryGetValue(Of, out Func<Object, Object>? a) && a is not null)
+				ob.Of.Casts.TryGetValue(Of, out Func<IObject, IObject>? a) && a is not null)
 				return Convert(a(ob), from, gen);
 
 			if (!Convert(other.ReturnType.Of))
@@ -173,8 +173,8 @@
 		public override string ToString()
 		{
 			if (DynTyped)
-				return $"Typed${Of.Name}{(Null ? "*" : "")}";
-			return $"{Of.Name}{(IsNotStack ? "*" : "")}";
+				return $"Typed${Of.TypeName}{(Null ? "*" : "")}";
+			return $"{Of.CName}{(IsNotStack ? "*" : "")}";
 		}
 	}
 }

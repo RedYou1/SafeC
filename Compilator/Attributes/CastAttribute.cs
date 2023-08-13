@@ -18,10 +18,10 @@ namespace SafeC
 			return @return;
 		}
 
-		(Type @return, Func<Object, Object> action) getAction(MethodInfo method, Dictionary<string, Class>? gen)
+		(Type @return, Func<IObject, IObject> action) getAction(MethodInfo method, Dictionary<string, Class>? gen)
 		{
 			var @return = ApplyFunc(gen);
-			var action = (Object a) => new CastAction(@return, a, ob => method.GetCastDef(ob));
+			var action = (IObject a) => new CastAction(@return, a, ob => method.GetCastDef(ob));
 			return (@return, action);
 		}
 
@@ -47,23 +47,28 @@ namespace SafeC
 				throw new Exception();
 		}
 
-		public class CastAction : Object
+		public class CastAction : IObject
 		{
-			public readonly Object Object;
+			public Type ReturnType { get; }
+			public readonly IObject Object;
 			public readonly Func<string, FileReader> Func;
 
-			public override bool Null { get => Object.Null; set => Object.Null = value; }
-			public override bool Own { get => Object.Own; set => Object.Own = value; }
-			public override string Name => Object.Name;
+			public bool Null { get => Object.Null; }
+			public bool Own { get => Object.Own; set => Object.Own = value; }
+			public string Name => Object.Name;
 
-			public CastAction(Type returnType, Object ob, Func<string, FileReader> func)
-				: base(returnType, null!)
+			public Class Of => ReturnType.Of;
+
+			IEnumerable<ActionContainer> ActionContainer.SubActions => Object.SubActions;
+
+			public CastAction(Type returnType, IObject ob, Func<string, FileReader> func)
 			{
+				ReturnType = returnType;
 				Object = ob;
 				Func = func;
 			}
 
-			public override IEnumerable<string> Compile()
+			public IEnumerable<string> Compile()
 			{
 				var a = Object.Compile();
 				foreach (var c in a.SkipLast(1))
@@ -72,7 +77,7 @@ namespace SafeC
 					yield return s;
 			}
 
-			public override IEnumerable<Token> ToInclude()
+			public IEnumerable<Token> ToInclude()
 			{
 				yield return ReturnType.Of;
 				foreach (var c in Object.ToInclude())

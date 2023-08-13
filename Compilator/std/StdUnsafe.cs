@@ -7,10 +7,12 @@
 		public IEnumerable<ActionContainer> SubActions => throw new NotImplementedException();
 
 		public readonly string Content;
+		public readonly Token[] ToIncludes;
 
-		public StdUnsafe(string content)
+		public StdUnsafe(string content, params Token[] toIncludes)
 		{
 			Content = content;
+			ToIncludes = toIncludes;
 		}
 
 		public IEnumerable<string> Compile()
@@ -18,6 +20,6 @@
 			yield return Content;
 		}
 
-		public IEnumerable<Token> ToInclude() => Enumerable.Empty<Token>();
+		public IEnumerable<Token> ToInclude() => ToIncludes;
 	}
 }

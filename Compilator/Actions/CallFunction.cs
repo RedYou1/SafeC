@@ -3,11 +3,10 @@ using System.Text;
 
 namespace SafeC
 {
-	internal class CallFunction : Action
+	internal class CallFunction : IObject
 	{
-		public Type ReturnType => Func.ReturnType ?? throw new Exception();
-
-		public string Name => throw new NotImplementedException();
+		public Type ReturnType => Func.ReturnType;
+		public string Name => string.Empty;
 
 		public readonly Func Func;
 		public readonly IEnumerable<ActionContainer>[] Args;
@@ -21,6 +20,10 @@ namespace SafeC
 						yield return a;
 			}
 		}
+
+		public bool Own { get; set; } = true;
+		public bool Null => ReturnType.Null;
+		public Class Of => ReturnType.Of;
 
 		public CallFunction(Func func, IEnumerable<ActionContainer>[] args)
 		{
@@ -65,7 +68,7 @@ namespace SafeC
 			IFunc? f;
 			if (of.Length == 0)
 			{
-				f = Compiler.Instance!.Tokens[name] as IFunc;
+				f = Compiler.Instance!.GetFunc(name, gen);
 
 				if (f is null)
 					throw new CompileException($"function {name} not found");

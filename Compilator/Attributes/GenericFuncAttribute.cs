@@ -52,9 +52,9 @@ namespace SafeC
 				gen2 => Compiler.Instance!.GetType(Return, c, gen2, false),
 				gen2 =>
 				{
-					var v = Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen2), t[1]));
+					var v = Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen2, false), t[1]));
 					if (c is not null)
-						v = v.Prepend(new Parameter(Compiler.Instance!.GetType(Return, c, gen2), "this"));
+						v = v.Prepend(new Parameter(Compiler.Instance!.GetType(Return, c, gen2, false), "this"));
 					return v.ToArray();
 				});
 		}

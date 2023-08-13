@@ -16,7 +16,7 @@ namespace SafeC
 
 		public Parameter[] ApplyFunc(Class c, Dictionary<string, Class>? gen)
 		{
-			return Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen), t[1])).ToArray();
+			return Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen, false), t[1])).ToArray();
 		}
 
 		public void Implement(MethodInfo method, ClassAttribute? c, GenericClassAttribute? c2)

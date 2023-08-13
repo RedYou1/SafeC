@@ -22,4 +22,6 @@ i32 main():
 	new<Colors> Container<i32>(32i, Colors.blue)
 	print("\n")
 	new<i32> Container<Colors>(Colors.red, 16i)
+	print("\n")
+	new<str> Container<str>("A", "B")
 	return 0i

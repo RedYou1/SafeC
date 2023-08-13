@@ -6,12 +6,14 @@ namespace SafeC
 	{
 		protected bool Included;
 
+		public string TypeName { get; }
+		public string CName { get; }
 		public string Name { get; }
 
 		public Class? Extends { get; set; }
 		public Class[] Implements { get; set; }
 
-		public Dictionary<Class, Func<Object, Object>> Casts = new();
+		public Dictionary<Class, Func<IObject, IObject>> Casts = new();
 
 		public readonly List<ActionContainer> Variables = new List<ActionContainer>();
 		public readonly Dictionary<string, IFunc> Funcs = new();
@@ -46,15 +48,17 @@ namespace SafeC
 
 		public List<IClass> Childs { get; } = new();
 
-		public Class(string name, Class? extends, Class[] implements, bool included = false)
+		public Class(string name, string cname, Class? extends, Class[] implements, bool included = false)
 		{
 			Name = name;
+			CName = cname;
+			TypeName = Name.EndsWith('>') ? CName : Name;
 			Extends = extends;
 			Implements = implements;
 			Included = included;
 
 			if (!included && !Name.Equals("void") && !Name.Equals("Classes"))
-				Compiler.Instance!.Classes.Options.Add(Name);
+				Compiler.Instance!.Classes.Options.Add(TypeName);
 			extends?.Childs.Add(this);
 		}
 
@@ -72,7 +76,7 @@ namespace SafeC
 			if (string.IsNullOrEmpty(gens))
 			{
 				c = new Class(
-					captures[2],
+					name, name,
 					string.IsNullOrWhiteSpace(m[0]) ? null : IClass.IsClass(Compiler.Instance!.GetClass(m[0], gen)),
 					m.Skip(1).Select(Compiler.Instance!.GetInterface).ToArray());
 			}
@@ -127,15 +131,15 @@ namespace SafeC
 
 			if (SubActions.Any())
 			{
-				yield return $"typedef struct {Name} {{";
+				yield return $"typedef struct {TypeName} {{";
 				foreach (var v in SubActions)
 					foreach (var t in v.Compile())
 						yield return $"\t{t}";
-				yield return $"}}{Name}";
+				yield return $"}}{TypeName}";
 			}
 			else
 			{
-				yield return $"typedef struct {Name} {Name}";
+				yield return $"typedef struct {TypeName} {TypeName}";
 			}
 		}
 
@@ -152,7 +156,7 @@ namespace SafeC
 			int id = fromC.Constructors.Count / 2;
 
 			//Base
-			string fname = $"{fromC.Name}_Base_{name}_{id}";
+			string fname = $"{fromC.TypeName}_Base_{name}_{id}";
 			Type type = new Type(fromC, false, true, false, true, false, false);
 			IFunc f;
 			if (string.IsNullOrEmpty(gens))
@@ -162,7 +166,7 @@ namespace SafeC
 						: _params.Select(p =>
 						{
 							string[] p2 = p.Split(" ");
-							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
+							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen, false), p2.Last());
 						})).Prepend(new Parameter(type, "this")).ToArray())
 				{
 					Name = fname
@@ -188,14 +192,14 @@ namespace SafeC
 					gen2 => _params.Select(p =>
 					{
 						string[] p2 = p.Split(" ");
-						return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
+						return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2, false), p2.Last());
 					}).Prepend(new Parameter(type, "this")).ToArray());
 
 			fromC.Constructors.Add(f);
 
 
 			//New
-			fname = $"{fromC.Name}_{name}_{id}";
+			fname = $"{fromC.TypeName}_{name}_{id}";
 			type = new Type(fromC, true, false, false, false, true, false);
 			if (string.IsNullOrEmpty(gens))
 			{
@@ -205,7 +209,7 @@ namespace SafeC
 						: _params.Select(p =>
 						{
 							string[] p2 = p.Split(" ");
-							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen), p2.Last());
+							return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen, false), p2.Last());
 						}).ToArray())
 				{
 					Name = fname
@@ -223,7 +227,7 @@ namespace SafeC
 			}
 			else
 			{
-				FileReader fr2 = new(fr.Lines.Prepend(new($"{fromC.Name} this", func => func.Objects.Add("this", new(type, "this")))).Append("return this").ToArray());
+				FileReader fr2 = new(fr.Lines.Prepend($"{fromC.Name} this").Append("return this").ToArray());
 				f = new GenericFunc(fromC, fname, string.IsNullOrWhiteSpace(_params[0]) ? 0 : _params.Length,
 					gen, gens.Split(", "),
 							_ =>
@@ -235,7 +239,7 @@ namespace SafeC
 							gen2 => _params.Select(p =>
 							{
 								string[] p2 = p.Split(" ");
-								return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2), p2.Last());
+								return new Parameter(Compiler.Instance!.GetType(string.Join(' ', p2.SkipLast(1)), fromC, gen2, false), p2.Last());
 							}).ToArray());
 			}
 

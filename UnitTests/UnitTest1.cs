@@ -123,5 +123,8 @@ namespace UnitTests
 
 		[TestMethod]
 		public void UnionOK() => Test();
+
+		[TestMethod]
+		public void ResultOK() => Test();
 	}
 }

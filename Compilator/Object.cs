@@ -2,14 +2,21 @@
 
 namespace SafeC
 {
-	internal class Object : Action
+	internal interface IObject : Action
+	{
+		public bool Null { get; }
+		public bool Own { get; set; }
+		public Class Of { get; }
+	}
+
+	internal class Object : IObject
 	{
 		public Type ReturnType { get; }
 
-		public IEnumerable<ActionContainer> SubActions => Enumerable.Empty<ActionContainer>();
+		public virtual IEnumerable<ActionContainer> SubActions => Enumerable.Empty<ActionContainer>();
 
 		private string _name;
-		public virtual string Name => $"{_name}";
+		public string Name => $"{_name}";
 
 		public Dictionary<string, Object> Objects;
 

@@ -14,7 +14,7 @@ namespace SafeC
 
 		private Compiler()
 		{
-			VOID = new Class("void", null, Array.Empty<Class>(), true);
+			VOID = new Class("void", "void", null, Array.Empty<Class>(), true);
 			Classes = new Enum("Classes", false);
 
 			Tokens = new() {
@@ -36,11 +36,12 @@ namespace SafeC
 				{ Program.RETURNREGEX,((_,_,_,_,_)=>true,Return.Declaration) },
 				{ Program.BASEREGEX,((_,_,_,_,_)=>true,CallFunction.BaseDeclaration) },
 				{ Program.NEWREGEX,((_,_,_,_,_)=>true,CallFunction.NewDeclaration) },
-				{ Program.GETVARREGEX, ((lines,captures,_,_,_)=>captures.Value.Equals(lines.Current!.Line) && !captures.Value.Equals("return"),Object.Declaration) },
+				{ Program.GETVARREGEX, ((lines,captures,_,_,_)=>captures.Value.Equals(lines.Current!.Line) && !captures.Value.Equals("return") && !captures.Value.Equals("true") && !captures.Value.Equals("false"),Object.Declaration) },
 				{ Program.CHARREGEX,((_,_,_,_,_)=>true, (_,capture,_,_,_,_)=>new Object(GetType("char", null,null,false), capture.Value)) },
 				{ Program.STRINGREGEX,((_,_,_,_,_)=>true, (_,capture,_,_,_,_)=>new Object(GetType("str", null,null,false), capture.Value)) },
 				{ Program.NUMBERREGEX,((_,_,_,_,_)=>true, INumber.Declaration)},
-				{ Program.MATHREGEX,((_,_,_,_,_)=>true, Object.MathDeclaration) }
+				{ Program.MATHREGEX,((_,_,_,_,_)=>true, Object.MathDeclaration) },
+				{ Program.BOOLREGEX,((_,_,_,_,_)=>true, (_,capture,_,_,_,_)=>new Object(GetType("bool", null,null,false), capture.Value.Equals("true") ? "1" : capture.Value.Equals("false") ? "0" : throw new Exception())) }
 			};
 		}
 
@@ -103,6 +104,49 @@ namespace SafeC
 		internal IClass GetClass(string name, Dictionary<string, Class>? generic)
 		{
 			IClass? c = GetClassMaybe(name, generic);
+			if (c is null)
+				throw new TypeNotFoundException(name);
+			return c;
+		}
+
+		internal IFunc? GetFuncMaybe(string name, Dictionary<string, Class>? generic)
+		{
+			if (Tokens.TryGetValue(name, out var token))
+			{
+				if (token is not IFunc c)
+					throw new CompileException($"{token.Name} is not a IClass");
+				return c;
+			}
+
+			if (!name.EndsWith('>'))
+				return null;
+			int start = name.LastIndexOf('<');
+			if (start == -1)
+				throw new Exception();
+
+			var cc = GetFunc(name.Substring(0, start), generic);
+
+			if (cc is GenericFunc g)
+			{
+				string[] classesName = name.Substring(start + 1, name.Length - start - 2)
+						.Split(", ").ToArray();
+
+				if (g.GenNames.Length != classesName.Length)
+					throw new Exception();
+
+				Dictionary<string, Class> gen2 = new();
+
+				for (int i = 0; i < classesName.Length; i++)
+					gen2.Add(g.GenNames[i], IClass.IsClass(GetClass(classesName[i], generic)));
+
+				cc = g.GenerateFunc(gen2);
+			}
+			return cc;
+		}
+
+		internal IFunc GetFunc(string name, Dictionary<string, Class>? generic)
+		{
+			IFunc? c = GetFuncMaybe(name, generic);
 			if (c is null)
 				throw new TypeNotFoundException(name);
 			return c;
@@ -183,9 +227,9 @@ namespace SafeC
 				if (type.Attribute is null)
 					continue;
 
-				var c = new Class(type.Attribute.CName ?? type.Attribute.Name, null, Array.Empty<Class>(), type.Attribute.CName is not null);
+				var c = new Class(type.Attribute.Name, type.Attribute.CName ?? type.Attribute.Name, null, Array.Empty<Class>(), type.Attribute.CName is not null);
 
-				Tokens.Add(type.Attribute.Name, c);
+				Tokens.Add(c.Name, c);
 
 				yield return (type.Type, type.Attribute, c);
 			}

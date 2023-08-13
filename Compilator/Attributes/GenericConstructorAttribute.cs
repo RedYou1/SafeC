@@ -35,11 +35,11 @@ namespace SafeC
 		GenericFunc implement(
 			MethodInfo method, Class c, Dictionary<string, Class>? gen)
 		{
-			return new(c, c.Name, Params.Chunk(2).Count(), gen,
+			return new(c, c.TypeName, Params.Chunk(2).Count(), gen,
 				Generics,
 				method.GetFuncDef,
 				_ => new(c, true, false, false, false, true, false),
-				gen2 => Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen2), t[1])).ToArray());
+				gen2 => Params.Chunk(2).Select((t, i) => new Parameter(Compiler.Instance!.GetType(t[0], c, gen2, false), t[1])).ToArray());
 		}
 	}
 }
