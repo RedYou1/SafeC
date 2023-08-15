@@ -51,6 +51,9 @@ namespace SafeC
 
 			var r = Compiler.Instance!.GetType(captures[1], fromC, gen, current?.ReturnType.Possessed ?? fromF is null);
 
+			if (r.Of == Compiler.Instance!.VOID && !r.Ref)
+				throw new Exception();
+
 			var d = new Declaration(r, current) { Name = captures[11] };
 
 			if (fromF is not null)

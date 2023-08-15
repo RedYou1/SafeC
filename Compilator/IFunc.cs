@@ -7,6 +7,8 @@
 
 		public Parameter(Type type, string name)
 		{
+			if (type.Of == Compiler.Instance!.VOID && !type.Ref)
+				throw new Exception();
 			Type = type;
 			Name = name;
 		}
