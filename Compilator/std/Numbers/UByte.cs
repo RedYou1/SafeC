@@ -5,6 +5,13 @@
 	{
 		public static IEnumerable<StdLine> Variables() { return Enumerable.Empty<StdLine>(); }
 
+		public static void ApplyMeta(Class c, Type t)
+		{
+			t.MetaData.Add(new RangeMetaData<byte>(
+				byte.MinValue, byte.MaxValue
+			));
+		}
+
 		[Cast("str")]
 		public static IEnumerable<StdLine> ToStr(string ob)
 		{

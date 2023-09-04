@@ -10,6 +10,7 @@
 		public readonly bool CanCallFunc;
 		public readonly bool Possessed;
 
+		public readonly MetaDataManager MetaData = new();
 
 		public bool IsPtr => !DynTyped && IsNotStack;
 		public bool IsNotStack => Ref || Null;
@@ -25,6 +26,7 @@
 			bool possessed)
 		{
 			Of = of;
+			Of.ApplyMeta?.Invoke(this);
 			Own = own;
 			Ref = _ref;
 			Null = _null;
@@ -56,6 +58,13 @@
 
 			if (Own && other.ReturnType.Possessed && !Of.Name.Equals("str"))
 				throw new CompileException("Cant take ownership of possessed object");
+
+			if (other.ReturnType.MetaData.TryGetValue<RangeMetaData>(out var rangeOther) &&
+				MetaData.TryGetValue<RangeMetaData>(out var range))
+			{
+				if (!range.Contains(rangeOther))
+					throw new Exception();
+			}
 
 			if (other.ReturnType.Of == Compiler.Instance!.VOID)
 			{

@@ -19,9 +19,10 @@
 		internal const string RETURNREGEX = $@"^return( (.+)){{0,1}}$";
 		internal const string NEWREGEX = $@"^new(<((?&cl)(, (?&cl))*)>){{0,1}} {DEFNAMEREGEX}\((.*)\)$";
 
-		internal const string CHARREGEX = "^'\\\\{0,1}(.)'$";
+		internal const string CHARREGEX = @"^'\\{0,1}(.)'$";
 		internal const string STRINGREGEX = "^\"(.*)\"$";
 		internal const string NUMBERREGEX = @"^\-{0,1}[0-9_]+(\.[0-9_]+){0,1}i{0,1}$";
+		internal const string RANGEREGEX = @"^(?'a'(?'b'((i|u)(8|(16)|(32)|(64))(\.MinValue)?(\.MaxValue)?)|(-?[0-9_]+))(..(?&b)?)?)((U|\\)(?&a))*$";
 		internal const string BOOLREGEX = @"^((true)|(false))$";
 
 		internal const string MATHREGEX = $@"^(([0-9_\.]+)|({GETVARREGEX})) (\+|-|\*|\/) (([0-9_\.]+)|((?&var)))$";

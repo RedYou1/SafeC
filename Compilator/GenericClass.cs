@@ -8,6 +8,7 @@
 		public Class[] Implements { get; set; }
 
 		public Func<Class, Dictionary<string, Class>, IEnumerable<ActionContainer>> Variables = null!;
+		public Func<Class, Dictionary<string, Class>, Action<Type>>? ApplyMeta;
 		public List<Func<Class, Dictionary<string, Class>, IFunc>> Constructors = new();
 		public List<Func<Class, Dictionary<string, Class>, (Class, Func<IObject, IObject>)>> Casts = new();
 		public List<Func<Class, Dictionary<string, Class>, IFunc>> Funcs = new();
@@ -39,6 +40,9 @@
 
 			Class c = new Class($"{Name}<{string.Join(", ", gen.Select(g => g.Name))}>", $"{Name}${string.Join('$', gen.Select(g => g.Name))}", null, Array.Empty<Class>());
 			Objects.Add(gen, c);
+
+			if (ApplyMeta is not null)
+				c.ApplyMeta = ApplyMeta(c, ogen);
 
 			foreach (ActionContainer d in Variables(c, ogen))
 				c.Variables.Add(d);

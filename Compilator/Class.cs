@@ -18,6 +18,7 @@ namespace SafeC
 		public readonly List<ActionContainer> Variables = new List<ActionContainer>();
 		public readonly Dictionary<string, IFunc> Funcs = new();
 		public readonly List<IFunc> Constructors = new();
+		public Action<Type>? ApplyMeta { get; set; }
 
 		public IEnumerable<ActionContainer> SubActions
 		{

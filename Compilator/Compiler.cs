@@ -82,6 +82,11 @@ namespace SafeC
 				return c;
 			}
 
+			if (PcreRegex.IsMatch(name, Program.RANGEREGEX))
+			{
+				return new Range(name);
+			}
+
 			if (!name.EndsWith('>'))
 				return null;
 			int start = name.LastIndexOf('<');
@@ -235,7 +240,7 @@ namespace SafeC
 			}
 		}
 
-		private MethodInfo getMethodInfo(System.Type type, IClassAttribute attribute, IClass @class)
+		private (MethodInfo Variables, MethodInfo? ApplyMeta) getMethodInfo(System.Type type, IClassAttribute attribute, IClass @class)
 		{
 			if (attribute.Extends is not null)
 			{
@@ -248,19 +253,20 @@ namespace SafeC
 			var v = type.GetMethods().SingleOrDefault(m => m.Name.Equals("Variables"));
 			if (v is null)
 				throw new Exception();
-			return v;
+			var m = type.GetMethods().SingleOrDefault(m => m.Name.Equals("ApplyMeta"));
+			return (v, m);
 		}
 
 		internal void Init()
 		{
 			foreach (var type in InitGenericClass().ToList())
 			{
-				MethodInfo v = getMethodInfo(type.Type, type.Attribute, type.Class);
+				(MethodInfo v, MethodInfo? m) = getMethodInfo(type.Type, type.Attribute, type.Class);
 
 				if (!Tokens.TryGetValue(type.Attribute.Name, out Token? tc) || tc is not GenericClass c)
 					throw new Exception();
 
-				IEnumerable<ActionContainer> Variables(Class c, Dictionary<string, Class>? gen)
+				IEnumerable<ActionContainer> Variables(Class c, Dictionary<string, Class> gen)
 				{
 					foreach (Token t in v.GetFuncDef(gen).Parse(c, null, gen))
 					{
@@ -271,11 +277,19 @@ namespace SafeC
 				}
 
 				c.Variables = Variables;
+
+				if (m is not null)
+				{
+					Action<Type> ApplyMeta(Class c, Dictionary<string, Class> gen)
+						=> t => m.Invoke(null, new object?[] { c, gen, t });
+
+					c.ApplyMeta = ApplyMeta;
+				}
 			}
 
 			foreach (var type in InitClass().ToList())
 			{
-				MethodInfo v = getMethodInfo(type.Type, type.Attribute, type.Class);
+				(MethodInfo v, MethodInfo? m) = getMethodInfo(type.Type, type.Attribute, type.Class);
 
 				if (!Tokens.TryGetValue(type.Attribute.Name, out Token? tc) || tc is not Class c)
 					throw new Exception();
@@ -286,6 +300,9 @@ namespace SafeC
 						throw new Exception();
 					c.Variables.Add(d);
 				}
+
+				if (m is not null)
+					c.ApplyMeta = t => m.Invoke(null, new object?[] { c, t });
 			}
 
 			Classes.Init();
